@@ -2,13 +2,12 @@ use std::collections::{hash_map::DefaultHasher, BTreeSet, HashSet};
 use std::hash::{Hash, Hasher};
 
 use bevy::input::gamepad::{GamepadConnection, GamepadEvent};
-use bevy::sprite::collide_aabb::Collision;
+use bevy::math::bounding::{Aabb2d, BoundingVolume, IntersectsVolume};
 use bevy::{
     prelude::*,
     render::camera::ScalingMode,
-    sprite::collide_aabb::collide,
     sprite::Anchor,
-    text::{Text2dBounds, TextAlignment},
+    text::{JustifyText, Text2dBounds},
     window::WindowResolution,
 };
 use interpolation::*;
@@ -186,6 +185,14 @@ struct Player {
 #[derive(Component)]
 struct Collider {
     pub size: Vec2,
+}
+
+enum Collision {
+    Left,
+    Right,
+    Top,
+    Bottom,
+    Inside,
 }
 
 #[derive(Event)]
@@ -440,22 +447,22 @@ fn main() -> anyhow::Result<()> {
                     pad: None,
                     mapping: ControlMapping {
                         move_up: ButtonMapping {
-                            keyboard_key: KeyCode::W,
+                            keyboard_key: KeyCode::KeyW,
                             gamepad_button: Some(GamepadButtonType::DPadUp),
                             gamepad_axis: Some(GamepadAxisType::LeftStickY),
                         },
                         move_down: ButtonMapping {
-                            keyboard_key: KeyCode::S,
+                            keyboard_key: KeyCode::KeyS,
                             gamepad_button: Some(GamepadButtonType::DPadDown),
                             gamepad_axis: Some(GamepadAxisType::LeftStickY),
                         },
                         move_left: ButtonMapping {
-                            keyboard_key: KeyCode::A,
+                            keyboard_key: KeyCode::KeyA,
                             gamepad_button: Some(GamepadButtonType::DPadLeft),
                             gamepad_axis: Some(GamepadAxisType::LeftStickX),
                         },
                         move_right: ButtonMapping {
-                            keyboard_key: KeyCode::D,
+                            keyboard_key: KeyCode::KeyD,
                             gamepad_button: Some(GamepadButtonType::DPadRight),
                             gamepad_axis: Some(GamepadAxisType::LeftStickX),
                         },
@@ -501,22 +508,22 @@ fn main() -> anyhow::Result<()> {
                     pad: None,
                     mapping: ControlMapping {
                         move_up: ButtonMapping {
-                            keyboard_key: KeyCode::Up,
+                            keyboard_key: KeyCode::ArrowUp,
                             gamepad_button: Some(GamepadButtonType::DPadUp),
                             gamepad_axis: Some(GamepadAxisType::LeftStickY),
                         },
                         move_down: ButtonMapping {
-                            keyboard_key: KeyCode::Down,
+                            keyboard_key: KeyCode::ArrowDown,
                             gamepad_button: Some(GamepadButtonType::DPadDown),
                             gamepad_axis: Some(GamepadAxisType::LeftStickY),
                         },
                         move_left: ButtonMapping {
-                            keyboard_key: KeyCode::Left,
+                            keyboard_key: KeyCode::ArrowLeft,
                             gamepad_button: Some(GamepadButtonType::DPadLeft),
                             gamepad_axis: Some(GamepadAxisType::LeftStickX),
                         },
                         move_right: ButtonMapping {
-                            keyboard_key: KeyCode::Right,
+                            keyboard_key: KeyCode::ArrowRight,
                             gamepad_button: Some(GamepadButtonType::DPadRight),
                             gamepad_axis: Some(GamepadAxisType::LeftStickX),
                         },
@@ -602,7 +609,7 @@ fn main() -> anyhow::Result<()> {
 fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
     app_settings: Res<AppSettings>,
     game_settings: Res<GameSettings>,
     mut rng: ResMut<Rand>,
@@ -619,7 +626,7 @@ fn setup(
     spawn_player(
         &mut commands,
         &asset_server,
-        &mut texture_atlases,
+        &mut texture_atlas_layouts,
         Vec3::new(
             -(app_settings.base_resolution.x / 2.) + CONVEYOR_SIZE.x + (PLAYER_SIZE / 2.),
             0.,
@@ -632,7 +639,7 @@ fn setup(
     spawn_player(
         &mut commands,
         &asset_server,
-        &mut texture_atlases,
+        &mut texture_atlas_layouts,
         Vec3::new(
             (app_settings.base_resolution.x / 2.) - CONVEYOR_SIZE.x - (PLAYER_SIZE / 2.),
             0.,
@@ -649,7 +656,7 @@ fn setup(
     spawn_conveyor(
         &mut commands,
         &asset_server,
-        &mut texture_atlases,
+        &mut texture_atlas_layouts,
         Vec3::new(-CONVEYOR_SIZE.x / 2., 0., 0.),
         incoming_belt_length,
         PlayAreaAligment::Left,
@@ -658,7 +665,7 @@ fn setup(
     spawn_conveyor(
         &mut commands,
         &asset_server,
-        &mut texture_atlases,
+        &mut texture_atlas_layouts,
         Vec3::new(
             -(app_settings.base_resolution.x / 2.) + (CONVEYOR_SIZE.x / 2.),
             -(app_settings.base_resolution.y / 2.) + (outgoing_belt_length / 2.),
@@ -672,7 +679,7 @@ fn setup(
     spawn_conveyor(
         &mut commands,
         &asset_server,
-        &mut texture_atlases,
+        &mut texture_atlas_layouts,
         Vec3::new(CONVEYOR_SIZE.x / 2., 0., 0.),
         incoming_belt_length,
         PlayAreaAligment::Right,
@@ -681,7 +688,7 @@ fn setup(
     spawn_conveyor(
         &mut commands,
         &asset_server,
-        &mut texture_atlases,
+        &mut texture_atlas_layouts,
         Vec3::new(
             (app_settings.base_resolution.x / 2.) - (CONVEYOR_SIZE.x / 2.),
             -(app_settings.base_resolution.y / 2.) + (outgoing_belt_length / 2.),
@@ -695,7 +702,7 @@ fn setup(
     spawn_supervisor(
         &mut commands,
         &asset_server,
-        &mut texture_atlases,
+        &mut texture_atlas_layouts,
         Vec3::new(0., game_settings.supervisor_monitoring_y_pos, 0.),
         &mut rng,
     );
@@ -904,7 +911,7 @@ fn setup(
                                     },
                                 ),
                             ])
-                            .with_alignment(TextAlignment::Right),
+                            .with_justify(JustifyText::Right),
                             text_anchor: Anchor::BottomRight,
                             text_2d_bounds: Text2dBounds {
                                 size: Vec2::new(
@@ -965,7 +972,7 @@ fn setup(
                                     },
                                 ),
                             ])
-                            .with_alignment(TextAlignment::Right),
+                            .with_justify(JustifyText::Right),
                             text_anchor: Anchor::BottomRight,
                             text_2d_bounds: Text2dBounds {
                                 size: Vec2::new(
@@ -1026,7 +1033,7 @@ fn setup(
                                     },
                                 ),
                             ])
-                            .with_alignment(TextAlignment::Right),
+                            .with_justify(JustifyText::Right),
                             text_anchor: Anchor::BottomRight,
                             text_2d_bounds: Text2dBounds {
                                 size: Vec2::new(
@@ -1117,8 +1124,8 @@ fn gamepad_connected(
 
 fn update_controller_mappings(
     mut game_state: ResMut<GameState>,
-    keyboard_input: Res<Input<KeyCode>>,
-    gamepad_buttons: Res<Input<GamepadButton>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    gamepad_buttons: Res<ButtonInput<GamepadButton>>,
     gamepad_axes: Res<Axis<GamepadAxis>>,
 ) {
     const GAMEPAD_AXIS_THRESHOLD: f32 = 0.5;
@@ -1280,15 +1287,14 @@ fn update_controller_mappings(
 fn spawn_player(
     commands: &mut Commands,
     asset_server: &Res<AssetServer>,
-    texture_atlases: &mut ResMut<Assets<TextureAtlas>>,
+    texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>,
     player_pos: Vec3,
     player_index: PlayerIndex,
     rng: &mut ResMut<Rand>,
 ) {
     let tone_sprite = rng.gen_range(0..PLAYER_SPRITES.len());
     let texture_handle: Handle<Image> = asset_server.load(PLAYER_SPRITES[tone_sprite]);
-    let texture_atlas =
-        TextureAtlas::from_grid(texture_handle, PLAYER_SPRITE_SIZE, 4, 1, None, None);
+    let atlas_layout = TextureAtlasLayout::from_grid(PLAYER_SPRITE_SIZE, 4, 1, None, None);
     let animation_indices = AnimationData {
         start_frame: 0,
         frame_count: 4,
@@ -1298,12 +1304,15 @@ fn spawn_player(
     commands
         .spawn((
             SpriteSheetBundle {
-                texture_atlas: texture_atlases.add(texture_atlas),
-                sprite: TextureAtlasSprite {
+                sprite: Sprite {
                     custom_size: Some(Vec2::new(PLAYER_SIZE, PLAYER_SIZE)),
-                    index: animation_indices.start_frame,
                     ..default()
                 },
+                atlas: TextureAtlas {
+                    layout: texture_atlas_layouts.add(atlas_layout),
+                    index: animation_indices.start_frame,
+                },
+                texture: texture_handle,
                 transform: Transform {
                     translation: player_pos,
                     ..default()
@@ -1343,14 +1352,13 @@ fn spawn_player(
 fn spawn_supervisor(
     commands: &mut Commands,
     asset_server: &Res<AssetServer>,
-    texture_atlases: &mut ResMut<Assets<TextureAtlas>>,
+    texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>,
     supervisor_start_pos: Vec3,
     rng: &mut ResMut<Rand>,
 ) {
     let tone_sprite = rng.gen_range(0..SUPERVISOR_SPRITES.len());
     let texture_handle: Handle<Image> = asset_server.load(SUPERVISOR_SPRITES[tone_sprite]);
-    let texture_atlas =
-        TextureAtlas::from_grid(texture_handle, PLAYER_SPRITE_SIZE, 2, 1, None, None);
+    let atlas_layout = TextureAtlasLayout::from_grid(PLAYER_SPRITE_SIZE, 2, 1, None, None);
     let animation_indices = AnimationData {
         start_frame: 0,
         frame_count: 2,
@@ -1362,12 +1370,15 @@ fn spawn_supervisor(
     distracted_timer.pause();
     commands.spawn((
         SpriteSheetBundle {
-            texture_atlas: texture_atlases.add(texture_atlas),
-            sprite: TextureAtlasSprite {
+            sprite: Sprite {
                 custom_size: Some(Vec2::new(PLAYER_SIZE, PLAYER_SIZE)),
-                index: animation_indices.start_frame,
                 ..default()
             },
+            atlas: TextureAtlas {
+                layout: texture_atlas_layouts.add(atlas_layout),
+                index: animation_indices.start_frame,
+            },
+            texture: texture_handle,
             transform: Transform {
                 translation: supervisor_start_pos,
                 ..default()
@@ -1463,7 +1474,7 @@ fn spawn_package_wave(
 fn spawn_conveyor(
     commands: &mut Commands,
     asset_server: &Res<AssetServer>,
-    texture_atlases: &mut ResMut<Assets<TextureAtlas>>,
+    texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>,
     conveyor_pos: Vec3,
     conveyor_belt_length: f32,
     area_alignment: PlayAreaAligment,
@@ -1501,8 +1512,7 @@ fn spawn_conveyor(
     let conveyor_border_local_size =
         (CONVEYOR_BORDER_SIZE / CONVEYOR_SPRITE_SIZE.x) * CONVEYOR_SIZE.x;
     let texture_handle: Handle<Image> = asset_server.load(CONVEYOR_SPRITE);
-    let texture_atlas = TextureAtlas::from_grid(
-        texture_handle,
+    let atlas_layout = TextureAtlasLayout::from_grid(
         Vec2::new(CONVEYOR_SPRITE_SIZE.x, CONVEYOR_SPRITE_SIZE.y),
         5,
         1,
@@ -1522,12 +1532,15 @@ fn spawn_conveyor(
     commands
         .spawn((
             SpriteSheetBundle {
-                texture_atlas: texture_atlases.add(texture_atlas),
-                sprite: TextureAtlasSprite {
+                sprite: Sprite {
                     custom_size: Some(Vec2::new(CONVEYOR_SIZE.x, conveyor_belt_length)),
-                    index: animation_indices.start_frame,
                     ..default()
                 },
+                atlas: TextureAtlas {
+                    layout: texture_atlas_layouts.add(atlas_layout),
+                    index: animation_indices.start_frame,
+                },
+                texture: texture_handle,
                 transform: Transform {
                     translation: conveyor_pos,
                     ..default()
@@ -1600,24 +1613,24 @@ fn move_player(
 
 fn animate_sprite_maps(
     time: Res<Time>,
-    mut sprite_map_query: Query<(&AnimationData, &mut AnimationTimer, &mut TextureAtlasSprite)>,
+    mut sprite_map_query: Query<(&AnimationData, &mut AnimationTimer, &mut TextureAtlas)>,
 ) {
-    for (anim_data, mut timer, mut sprite_map) in sprite_map_query
+    for (anim_data, mut timer, mut atlas) in sprite_map_query
         .iter_mut()
         .filter(|(anim_data, _, _)| !anim_data.pause)
     {
         timer.0.tick(time.delta());
         if timer.0.finished() {
-            sprite_map.index = (sprite_map.index + 1) % anim_data.frame_count;
+            atlas.index = (atlas.index + 1) % anim_data.frame_count;
         }
     }
 }
 
 fn select_sprite_facing_index(
-    mut query: Query<(&AnimationData, &mut TextureAtlasSprite), Without<Conveyor>>,
+    mut query: Query<(&AnimationData, &mut TextureAtlas), Without<Conveyor>>,
 ) {
-    for (anim_data, mut sprite_map) in &mut query {
-        sprite_map.index = anim_data.start_frame + anim_data.facing_direction.as_sprite_index();
+    for (anim_data, mut atlas) in &mut query {
+        atlas.index = anim_data.start_frame + anim_data.facing_direction.as_sprite_index();
     }
 }
 
@@ -1687,7 +1700,7 @@ fn update_conveyors(
                 // conveyor is inactive, make sure blinker is inactive
                 anim_data.pause = true;
                 if !conveyor_info.idle_timer.paused()
-                    && conveyor_info.idle_timer.percent_left() <= 0.25
+                    && conveyor_info.idle_timer.fraction_remaining() <= 0.25
                 {
                     // 25% of the idle time remaining, let player know we're almost active
                     blinker_sprite.color = blinker.readying_colour;
@@ -1774,16 +1787,29 @@ fn check_for_collisions(
                 continue;
             }
 
-            let collision = collide(
-                transform_a.translation(),
-                collider_a.size,
-                transform_b.translation(),
-                collider_b.size,
-            );
+            let aabb_a = Aabb2d::new(transform_a.translation().truncate(), collider_a.size / 2.);
+            let aabb_b = Aabb2d::new(transform_b.translation().truncate(), collider_b.size / 2.);
 
-            if let Some(collision) = collision {
+            if aabb_a.intersects(&aabb_b) {
+                let closest = aabb_b.closest_point(aabb_a.center());
+                let offset = aabb_a.center() - closest;
+                let side = if offset.x.abs() > offset.y.abs() {
+                    if offset.x > 0. {
+                        Collision::Right
+                    } else {
+                        Collision::Left
+                    }
+                } else if offset.y.abs() > offset.x.abs() {
+                    if offset.y > 0. {
+                        Collision::Top
+                    } else {
+                        Collision::Bottom
+                    }
+                } else {
+                    Collision::Inside
+                };
                 collision_events.send(CollisionEvent {
-                    collision: collision,
+                    collision: side,
                     entity_a: entity_a,
                     entity_b: entity_b,
                 });
@@ -1843,19 +1869,19 @@ fn update_supervisor(
         let monitoring = !supervisor.monitoring_timer.finished();
         if monitoring {
             // supervisor "distraction" complete, return to monitoring
-            let t = supervisor.monitoring_timer.percent() / 0.4;
+            let t = supervisor.monitoring_timer.fraction() / 0.4;
             supervisor_transform.translation.y = supervisor_transform
                 .translation
                 .y
-                .lerp(&game_settings.supervisor_monitoring_y_pos, &t.clamp(0., 1.));
+                .lerp(game_settings.supervisor_monitoring_y_pos, t.clamp(0., 1.));
             supervisor_anim_data.facing_direction = FacingDirection::Down;
         } else {
             // supervisor monitoring complete, "distract" them
-            let t = supervisor.distracted_timer.percent() / 0.4;
+            let t = supervisor.distracted_timer.fraction() / 0.4;
             supervisor_transform.translation.y = supervisor_transform
                 .translation
                 .y
-                .lerp(&supervisor_offscreen_distraction_pos, &t.clamp(0., 1.));
+                .lerp(supervisor_offscreen_distraction_pos, t.clamp(0., 1.));
             supervisor_anim_data.facing_direction = FacingDirection::Up;
         }
     }
@@ -2098,7 +2124,7 @@ fn throw_package(
             // calculate throw distance
             package_transform.translation =
                 player_transform.translation + current_relative_position;
-            let throw_distance = player_info.throw_timer.percent() * THROW_POWER;
+            let throw_distance = player_info.throw_timer.fraction() * THROW_POWER;
 
             let mut direction = player_anim_data.facing_direction.as_vector();
             if player_control_state.move_up.pressed() {
