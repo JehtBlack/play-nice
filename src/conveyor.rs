@@ -2,7 +2,8 @@ use bevy::prelude::*;
 
 use crate::{
     AnimationData, AnimationTimer, Collider, CollisionEvent, EntityLayer, FacingDirection,
-    GameConfig, GameState, Package, PlayAreaAligment, Player, PlayerIndex, RenderLayers, Velocity,
+    GameConfig, GameState, Package, PlayAreaAligment, Player, PlayerIndex, RenderLayers,
+    TextureTarget, Velocity,
 };
 
 #[derive(Component, PartialEq, Eq)]
@@ -79,7 +80,7 @@ pub fn spawn_conveyor(
         .id();
 
     let texture_pack = game_config.get_texture_pack();
-    let conveyor_sprite = &texture_pack.conveyor;
+    let conveyor_sprite = &texture_pack.choose_texture_for(TextureTarget::Conveyor, None);
     let sprite_size = conveyor_sprite
         .cell_resolution
         .expect("Conveyor sprite must have a cell resolution")
@@ -200,12 +201,12 @@ pub fn check_for_delivered_packages(
                 commands.entity(package_entity).despawn();
                 match label {
                     ConveyorLabelTag::Outgoing(player_index) => {
-                        game_state.player_scores[player_index.index()].score +=
+                        game_state.player_scores[*player_index].score +=
                             game_config.package_config.base_score_value
-                                * game_state.player_scores[player_index.index()].multiplier;
-                        game_state.player_scores[player_index.index()].multiplier +=
+                                * game_state.player_scores[*player_index].multiplier;
+                        game_state.player_scores[*player_index].multiplier +=
                             game_config.score_config.multiplier_increase_per_package;
-                        game_state.player_scores[player_index.index()]
+                        game_state.player_scores[*player_index]
                             .multiplier_decrement_freeze_timer
                             .reset();
                     }

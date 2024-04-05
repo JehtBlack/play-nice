@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     calculate_attach_point_on_conveyor, random::*, Collider, Conveyor, ConveyorLabelTag,
-    EntityLayer, GameConfig, GameState, RenderLayers, Velocity,
+    EntityLayer, GameConfig, GameState, RenderLayers, TextureTarget, Velocity,
 };
 
 #[derive(Component)]
@@ -36,6 +36,7 @@ pub fn spawn_package(
     package_pos: Vec3,
 ) {
     let texture_pack = game_config.get_texture_pack();
+    let package_sprite = texture_pack.choose_texture_for(TextureTarget::Package, None);
     commands.spawn(PackageBundle {
         sprite_bundle: SpriteBundle {
             sprite: Sprite {
@@ -49,10 +50,7 @@ pub fn spawn_package(
                 translation: package_pos,
                 ..default()
             },
-            texture: asset_server.load(&format!(
-                "{}/{}",
-                texture_pack.root, texture_pack.package.path
-            )),
+            texture: asset_server.load(&format!("{}/{}", texture_pack.root, package_sprite.path)),
             ..default()
         },
         collider: Collider {
@@ -83,7 +81,8 @@ pub fn spawn_package_wave(
     game_state.package_wave_timer.pause();
 
     let texture_pack = game_config.get_texture_pack();
-    let package_sprite_path = format!("{}/{}", texture_pack.root, texture_pack.package.path);
+    let package_sprite = texture_pack.choose_texture_for(TextureTarget::Package, None);
+    let package_sprite_path = format!("{}/{}", texture_pack.root, package_sprite.path);
     for (conveyor_entity, mut conveyor_info, _) in
         conveyor_query.iter_mut().filter(|(_, _, tag)| match **tag {
             ConveyorLabelTag::Incoming => true,

@@ -12,7 +12,7 @@ friction = 100.0
 [game.texture_packs.default]
 root = "sprites"
 
-[[game.texture_packs.default.player]]
+[[game.texture_packs.default.texture_map.Player.Choose]]
 path = "player_skin_tone_a.png"
 grid_dimensions = [
     4,
@@ -23,7 +23,7 @@ cell_resolution = [
     128,
 ]
 
-[[game.texture_packs.default.player]]
+[[game.texture_packs.default.texture_map.Player.Choose]]
 path = "player_skin_tone_b.png"
 grid_dimensions = [
     4,
@@ -34,7 +34,7 @@ cell_resolution = [
     128,
 ]
 
-[[game.texture_packs.default.player]]
+[[game.texture_packs.default.texture_map.Player.Choose]]
 path = "player_skin_tone_c.png"
 grid_dimensions = [
     4,
@@ -45,7 +45,7 @@ cell_resolution = [
     128,
 ]
 
-[[game.texture_packs.default.player]]
+[[game.texture_packs.default.texture_map.Player.Choose]]
 path = "player_skin_tone_d.png"
 grid_dimensions = [
     4,
@@ -56,7 +56,7 @@ cell_resolution = [
     128,
 ]
 
-[[game.texture_packs.default.supervisor]]
+[[game.texture_packs.default.texture_map.Supervisor.Choose]]
 path = "supervisor_skin_tone_a.png"
 grid_dimensions = [
     2,
@@ -67,7 +67,7 @@ cell_resolution = [
     128,
 ]
 
-[[game.texture_packs.default.supervisor]]
+[[game.texture_packs.default.texture_map.Supervisor.Choose]]
 path = "supervisor_skin_tone_b.png"
 grid_dimensions = [
     2,
@@ -78,7 +78,7 @@ cell_resolution = [
     128,
 ]
 
-[[game.texture_packs.default.supervisor]]
+[[game.texture_packs.default.texture_map.Supervisor.Choose]]
 path = "supervisor_skin_tone_c.png"
 grid_dimensions = [
     2,
@@ -89,7 +89,7 @@ cell_resolution = [
     128,
 ]
 
-[[game.texture_packs.default.supervisor]]
+[[game.texture_packs.default.texture_map.Supervisor.Choose]]
 path = "supervisor_skin_tone_d.png"
 grid_dimensions = [
     2,
@@ -100,10 +100,10 @@ cell_resolution = [
     128,
 ]
 
-[game.texture_packs.default.package]
+[game.texture_packs.default.texture_map.Package.Only]
 path = "box.png"
 
-[game.texture_packs.default.conveyor]
+[game.texture_packs.default.texture_map.Conveyor.Only]
 path = "conveyor.png"
 grid_dimensions = [
     5,
@@ -114,13 +114,13 @@ cell_resolution = [
     128,
 ]
 
-[game.texture_packs.default.background]
+[game.texture_packs.default.texture_map.Background.Only]
 path = "background.png"
 
-[game.texture_packs.default.supervisor_office]
+[game.texture_packs.default.texture_map.SupervisorOffice.Only]
 path = "supervisor_office.png"
 
-[game.texture_packs.default.score_display]
+[game.texture_packs.default.texture_map.ScoreDisplay.Only]
 path = "display.png"
 
 [game.player_config]

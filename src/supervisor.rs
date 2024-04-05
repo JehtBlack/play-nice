@@ -1,6 +1,6 @@
 use crate::{
     random::*, AnimationData, AppConfig, EntityLayer, FacingDirection, GameConfig, Player,
-    RenderLayers,
+    RenderLayers, TextureTarget,
 };
 use bevy::prelude::*;
 
@@ -20,9 +20,7 @@ pub fn spawn_supervisor(
     game_config: &Res<GameConfig>,
 ) {
     let texture_pack = game_config.get_texture_pack();
-    let supervisor_sprites = &texture_pack.supervisor;
-    let tone_sprite = rng.gen_range(0..supervisor_sprites.len());
-    let supervisor_sprite = &supervisor_sprites[tone_sprite];
+    let supervisor_sprite = texture_pack.choose_texture_for(TextureTarget::Supervisor, Some(rng));
     let texture_handle: Handle<Image> =
         asset_server.load(&format!("{}/{}", texture_pack.root, supervisor_sprite.path));
     let sprite_size = supervisor_sprite

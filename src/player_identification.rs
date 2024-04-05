@@ -1,6 +1,7 @@
 use bevy::render::color::Color;
+use enum_map::Enum;
 
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(Enum, PartialEq, Eq, Clone, Copy)]
 pub enum PlayerIndex {
     Player1,
     Player2,

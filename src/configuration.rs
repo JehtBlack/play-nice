@@ -7,7 +7,27 @@ use bevy::{
     ecs::system::Resource,
     math::{UVec2, Vec2},
 };
+use enum_map::{enum_map, Enum, EnumMap};
 use serde::{Deserialize, Serialize};
+
+use crate::random::*;
+
+#[derive(Enum, Deserialize, Serialize, PartialEq, Eq, Hash)]
+pub enum TextureTarget {
+    Player,
+    Supervisor,
+    Package,
+    Conveyor,
+    Background,
+    SupervisorOffice,
+    ScoreDisplay,
+}
+
+#[derive(Deserialize, Serialize)]
+pub enum TextureValue {
+    Only(SpriteSheetConfig),
+    Choose(Vec<SpriteSheetConfig>),
+}
 
 #[derive(Deserialize, Serialize)]
 pub struct SpriteSheetConfig {
@@ -19,13 +39,7 @@ pub struct SpriteSheetConfig {
 #[derive(Deserialize, Serialize)]
 pub struct TexturePack {
     pub root: String,
-    pub player: Vec<SpriteSheetConfig>,
-    pub supervisor: Vec<SpriteSheetConfig>,
-    pub package: SpriteSheetConfig,
-    pub conveyor: SpriteSheetConfig,
-    pub background: SpriteSheetConfig,
-    pub supervisor_office: SpriteSheetConfig,
-    pub score_display: SpriteSheetConfig,
+    pub texture_map: EnumMap<TextureTarget, TextureValue>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -72,19 +86,28 @@ pub struct AppConfig {
 
 #[derive(Resource, Deserialize, Serialize)]
 pub struct GameConfig {
+    #[serde(default = "default_texture_pack_key")]
     pub selected_texture_pack: String,
+    #[serde(default = "default_texture_pack")]
     pub texture_packs: HashMap<String, TexturePack>,
+    #[serde(default)]
     pub player_config: PlayerConfig,
+    #[serde(default)]
     pub supervisor_config: SupervisorConfig,
+    #[serde(default)]
     pub conveyor_config: ConveyorConfig,
+    #[serde(default)]
     pub package_config: PackageConfig,
+    #[serde(default)]
     pub score_config: ScoreConfig,
     pub friction: f32,
 }
 
 #[derive(Default, Deserialize, Serialize)]
 pub struct Config {
+    #[serde(default)]
     pub app: AppConfig,
+    #[serde(default)]
     pub game: GameConfig,
 }
 
@@ -92,74 +115,76 @@ impl Default for TexturePack {
     fn default() -> Self {
         Self {
             root: "sprites".to_string(),
-            player: vec![
-                SpriteSheetConfig {
-                    path: "player_skin_tone_a.png".to_string(),
-                    grid_dimensions: Some(UVec2::new(4, 1)),
+            texture_map: enum_map! {
+                TextureTarget::Player => TextureValue::Choose(vec![
+                    SpriteSheetConfig {
+                        path: "player_skin_tone_a.png".to_string(),
+                        grid_dimensions: Some(UVec2::new(4, 1)),
+                        cell_resolution: Some(UVec2::new(128, 128)),
+                    },
+                    SpriteSheetConfig {
+                        path: "player_skin_tone_b.png".to_string(),
+                        grid_dimensions: Some(UVec2::new(4, 1)),
+                        cell_resolution: Some(UVec2::new(128, 128)),
+                    },
+                    SpriteSheetConfig {
+                        path: "player_skin_tone_c.png".to_string(),
+                        grid_dimensions: Some(UVec2::new(4, 1)),
+                        cell_resolution: Some(UVec2::new(128, 128)),
+                    },
+                    SpriteSheetConfig {
+                        path: "player_skin_tone_d.png".to_string(),
+                        grid_dimensions: Some(UVec2::new(4, 1)),
+                        cell_resolution: Some(UVec2::new(128, 128)),
+                    },
+                ]),
+                TextureTarget::Supervisor => TextureValue::Choose(vec![
+                    SpriteSheetConfig {
+                        path: "supervisor_skin_tone_a.png".to_string(),
+                        grid_dimensions: Some(UVec2::new(2, 1)),
+                        cell_resolution: Some(UVec2::new(128, 128)),
+                    },
+                    SpriteSheetConfig {
+                        path: "supervisor_skin_tone_b.png".to_string(),
+                        grid_dimensions: Some(UVec2::new(2, 1)),
+                        cell_resolution: Some(UVec2::new(128, 128)),
+                    },
+                    SpriteSheetConfig {
+                        path: "supervisor_skin_tone_c.png".to_string(),
+                        grid_dimensions: Some(UVec2::new(2, 1)),
+                        cell_resolution: Some(UVec2::new(128, 128)),
+                    },
+                    SpriteSheetConfig {
+                        path: "supervisor_skin_tone_d.png".to_string(),
+                        grid_dimensions: Some(UVec2::new(2, 1)),
+                        cell_resolution: Some(UVec2::new(128, 128)),
+                    },
+                ]),
+                TextureTarget::Package => TextureValue::Only(SpriteSheetConfig {
+                    path: "box.png".to_string(),
+                    grid_dimensions: None,
+                    cell_resolution: None,
+                }),
+                TextureTarget::Conveyor => TextureValue::Only(SpriteSheetConfig {
+                    path: "conveyor.png".to_string(),
+                    grid_dimensions: Some(UVec2::new(5, 1)),
                     cell_resolution: Some(UVec2::new(128, 128)),
-                },
-                SpriteSheetConfig {
-                    path: "player_skin_tone_b.png".to_string(),
-                    grid_dimensions: Some(UVec2::new(4, 1)),
-                    cell_resolution: Some(UVec2::new(128, 128)),
-                },
-                SpriteSheetConfig {
-                    path: "player_skin_tone_c.png".to_string(),
-                    grid_dimensions: Some(UVec2::new(4, 1)),
-                    cell_resolution: Some(UVec2::new(128, 128)),
-                },
-                SpriteSheetConfig {
-                    path: "player_skin_tone_d.png".to_string(),
-                    grid_dimensions: Some(UVec2::new(4, 1)),
-                    cell_resolution: Some(UVec2::new(128, 128)),
-                },
-            ],
-            supervisor: vec![
-                SpriteSheetConfig {
-                    path: "supervisor_skin_tone_a.png".to_string(),
-                    grid_dimensions: Some(UVec2::new(2, 1)),
-                    cell_resolution: Some(UVec2::new(128, 128)),
-                },
-                SpriteSheetConfig {
-                    path: "supervisor_skin_tone_b.png".to_string(),
-                    grid_dimensions: Some(UVec2::new(2, 1)),
-                    cell_resolution: Some(UVec2::new(128, 128)),
-                },
-                SpriteSheetConfig {
-                    path: "supervisor_skin_tone_c.png".to_string(),
-                    grid_dimensions: Some(UVec2::new(2, 1)),
-                    cell_resolution: Some(UVec2::new(128, 128)),
-                },
-                SpriteSheetConfig {
-                    path: "supervisor_skin_tone_d.png".to_string(),
-                    grid_dimensions: Some(UVec2::new(2, 1)),
-                    cell_resolution: Some(UVec2::new(128, 128)),
-                },
-            ],
-            package: SpriteSheetConfig {
-                path: "box.png".to_string(),
-                grid_dimensions: None,
-                cell_resolution: None,
-            },
-            conveyor: SpriteSheetConfig {
-                path: "conveyor.png".to_string(),
-                grid_dimensions: Some(UVec2::new(5, 1)),
-                cell_resolution: Some(UVec2::new(128, 128)),
-            },
-            background: SpriteSheetConfig {
-                path: "background.png".to_string(),
-                grid_dimensions: None,
-                cell_resolution: None,
-            },
-            supervisor_office: SpriteSheetConfig {
-                path: "supervisor_office.png".to_string(),
-                grid_dimensions: None,
-                cell_resolution: None,
-            },
-            score_display: SpriteSheetConfig {
-                path: "display.png".to_string(),
-                grid_dimensions: None,
-                cell_resolution: None,
+                }),
+                TextureTarget::Background => TextureValue::Only(SpriteSheetConfig {
+                    path: "background.png".to_string(),
+                    grid_dimensions: None,
+                    cell_resolution: None,
+                }),
+                TextureTarget::SupervisorOffice => TextureValue::Only(SpriteSheetConfig {
+                    path: "supervisor_office.png".to_string(),
+                    grid_dimensions: None,
+                    cell_resolution: None,
+                }),
+                TextureTarget::ScoreDisplay => TextureValue::Only(SpriteSheetConfig {
+                    path: "display.png".to_string(),
+                    grid_dimensions: None,
+                    cell_resolution: None,
+                })
             },
         }
     }
@@ -242,11 +267,37 @@ impl Default for GameConfig {
     }
 }
 
+impl TexturePack {
+    pub fn choose_texture_for(
+        &self,
+        target: TextureTarget,
+        rng: Option<&mut Rand>,
+    ) -> &SpriteSheetConfig {
+        match &self.texture_map[target] {
+            TextureValue::Only(config) => config,
+            TextureValue::Choose(configs) => {
+                let index = rng.map_or(0, |rng| rng.gen_range(0..configs.len()));
+                &configs[index]
+            }
+        }
+    }
+}
+
 impl GameConfig {
     pub fn get_texture_pack(&self) -> &TexturePack {
         self.texture_packs
             .get(&self.selected_texture_pack)
             .expect("Selected texture pack not found")
+    }
+}
+
+fn default_texture_pack_key() -> String {
+    "default".to_string()
+}
+
+fn default_texture_pack() -> HashMap<String, TexturePack> {
+    maplit::hashmap! {
+        default_texture_pack_key() => TexturePack::default(),
     }
 }
 

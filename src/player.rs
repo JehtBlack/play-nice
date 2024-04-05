@@ -4,7 +4,8 @@ use bevy::prelude::*;
 
 use crate::{
     random::*, AnimationData, Collider, CollisionEvent, Conveyor, ConveyorLabelTag, EntityLayer,
-    FacingDirection, GameConfig, GameState, Package, PlayerIndex, RenderLayers, Velocity,
+    FacingDirection, GameConfig, GameState, Package, PlayerIndex, RenderLayers, TextureTarget,
+    Velocity,
 };
 
 pub enum PlayAreaAligment {
@@ -44,9 +45,7 @@ pub fn spawn_player(
     game_config: &Res<GameConfig>,
 ) {
     let texture_pack = game_config.get_texture_pack();
-    let player_sprites = &texture_pack.player;
-    let tone_sprite = rng.gen_range(0..player_sprites.len());
-    let player_sprite = &player_sprites[tone_sprite];
+    let player_sprite = texture_pack.choose_texture_for(TextureTarget::Player, Some(rng));
     let texture_handle: Handle<Image> =
         asset_server.load(&format!("{}/{}", texture_pack.root, player_sprite.path));
     let sprite_size = player_sprite

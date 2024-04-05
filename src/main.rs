@@ -488,7 +488,7 @@ fn setup(
     ));
 
     let texture_pack = game_config.get_texture_pack();
-    let display_sprite = &texture_pack.score_display;
+    let display_sprite = texture_pack.choose_texture_for(TextureTarget::ScoreDisplay, None);
     let display_sprite_handle =
         asset_server.load(&format!("{}/{}", texture_pack.root, display_sprite.path));
     let team_display_size = Vec2::new(
@@ -524,7 +524,8 @@ fn setup(
     let player_colours = [PlayerIndex::Player1.into(), PlayerIndex::Player2.into()];
     let team_colour = Color::rgb_linear(0.6, 0.1, 0.6);
     let player_displays_border: [f32; 2] = [6., 6.];
-    let supervisor_office_sprite = &texture_pack.supervisor_office;
+    let supervisor_office_sprite =
+        texture_pack.choose_texture_for(TextureTarget::SupervisorOffice, None);
     commands
         .spawn((
             SpriteBundle {
@@ -733,7 +734,7 @@ fn setup(
                 });
         });
 
-    let background_sprite = &texture_pack.background;
+    let background_sprite = texture_pack.choose_texture_for(TextureTarget::Background, None);
     commands.spawn((
         SpriteBundle {
             sprite: Sprite {

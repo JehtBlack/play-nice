@@ -1,6 +1,7 @@
 use bevy::prelude::*;
+use enum_map::EnumMap;
 
-use crate::{GameConfig, PlayerControls};
+use crate::{GameConfig, PlayerControls, PlayerIndex};
 
 pub struct PlayerScoreData {
     pub score: f32,
@@ -10,23 +11,25 @@ pub struct PlayerScoreData {
 
 #[derive(Resource)]
 pub struct GameState {
-    pub player_scores: [PlayerScoreData; 2],
+    pub player_scores: EnumMap<PlayerIndex, PlayerScoreData>,
     pub package_wave_timer: Timer,
     pub player_controls: [PlayerControls; 2],
 }
 
 #[derive(Component)]
-pub struct TeamScoreTag;
+pub enum PlayerScoreTag {
+    All,
+    Player(PlayerIndex),
+}
 
-#[derive(Component)]
-pub struct PlayerScoreTag;
+
 
 pub fn update_score_multipiers(
     mut game_state: ResMut<GameState>,
     time: Res<Time>,
     game_config: Res<GameConfig>,
 ) {
-    for player_data in &mut game_state.player_scores {
+    for (_, player_data) in &mut game_state.player_scores {
         player_data
             .multiplier_decrement_freeze_timer
             .tick(time.delta());
@@ -40,26 +43,30 @@ pub fn update_score_multipiers(
 
 pub fn update_scores(
     game_state: ResMut<GameState>,
-    mut player_query: Query<&mut Text, (With<PlayerScoreTag>, Without<TeamScoreTag>)>,
-    mut team_query: Query<&mut Text, (With<TeamScoreTag>, Without<PlayerScoreTag>)>,
+    mut score_query: Query<(&mut Text, &PlayerScoreTag)>,
 ) {
-    for (i, mut player_score) in player_query.iter_mut().enumerate() {
-        player_score.sections[1].value = if game_state.player_scores[i].multiplier > 1. {
-            format!(
-                "{} [x{:.1}]",
-                game_state.player_scores[i].score as u64, game_state.player_scores[i].multiplier
-            )
-        } else {
-            (game_state.player_scores[i].score as u64).to_string()
-        };
-    }
-
-    for mut team_score in &mut team_query {
-        team_score.sections[1].value = (game_state
-            .player_scores
-            .iter()
-            .fold(0., |acc, p| acc + p.score)
-            .floor() as u64)
-            .to_string();
+    for (mut score, tag) in score_query.iter_mut() {
+        match tag {
+            PlayerScoreTag::All => {
+                score.sections[1].value = (game_state
+                    .player_scores
+                    .iter()
+                    .fold(0., |acc, (_, p)| acc + p.score)
+                    .floor() as u64)
+                    .to_string();
+            }
+            PlayerScoreTag::Player(player_index) => {
+                score.sections[1].value = if game_state.player_scores[*player_index].multiplier > 1.
+                {
+                    format!(
+                        "{} [x{:.1}]",
+                        game_state.player_scores[*player_index].score as u64,
+                        game_state.player_scores[*player_index].multiplier
+                    )
+                } else {
+                    (game_state.player_scores[*player_index].score as u64).to_string()
+                };
+            }
+        }
     }
 }
