@@ -8,6 +8,8 @@ use bevy::{
     window::WindowResolution,
 };
 
+use enum_map::enum_map;
+
 mod collision;
 mod configuration;
 mod conveyor;
@@ -64,18 +66,18 @@ fn main() -> anyhow::Result<()> {
         .insert_resource(config.game)
         .insert_resource(rng)
         .insert_resource(GameState {
-            player_scores: [
-                PlayerScoreData {
+            player_scores: enum_map! {
+                PlayerIndex::Player1 => PlayerScoreData {
                     score: 0.,
                     multiplier: 1.,
                     multiplier_decrement_freeze_timer: Timer::from_seconds(2., TimerMode::Once),
                 },
-                PlayerScoreData {
+                PlayerIndex::Player2 => PlayerScoreData {
                     score: 0.,
                     multiplier: 1.,
                     multiplier_decrement_freeze_timer: Timer::from_seconds(2., TimerMode::Once),
                 },
-            ],
+            },
             package_wave_timer: Timer::from_seconds(5., TimerMode::Once),
             player_controls: [
                 PlayerControls {
@@ -611,7 +613,7 @@ fn setup(
                             },
                             ..default()
                         },
-                        TeamScoreTag,
+                        PlayerScoreTag::All,
                     ));
                 });
 
@@ -672,7 +674,7 @@ fn setup(
                             },
                             ..default()
                         },
-                        PlayerScoreTag,
+                        PlayerScoreTag::Player(PlayerIndex::Player1),
                     ));
                 });
 
@@ -729,7 +731,7 @@ fn setup(
                             },
                             ..default()
                         },
-                        PlayerScoreTag,
+                        PlayerScoreTag::Player(PlayerIndex::Player2),
                     ));
                 });
         });

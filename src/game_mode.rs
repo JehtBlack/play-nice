@@ -22,8 +22,6 @@ pub enum PlayerScoreTag {
     Player(PlayerIndex),
 }
 
-
-
 pub fn update_score_multipiers(
     mut game_state: ResMut<GameState>,
     time: Res<Time>,
