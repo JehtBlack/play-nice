@@ -1,6 +1,6 @@
 use crate::{
-    random::*, AnimationData, AppSettings, EntityLayer, FacingDirection, GameSettings, Player,
-    RenderLayers, PLAYER_SIZE, PLAYER_SPRITE_SIZE, SUPERVISOR_SPRITES,
+    random::*, AnimationData, AppConfig, EntityLayer, FacingDirection, GameConfig, Player,
+    RenderLayers,
 };
 use bevy::prelude::*;
 
@@ -17,13 +17,32 @@ pub fn spawn_supervisor(
     texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>,
     supervisor_start_pos: Vec3,
     rng: &mut ResMut<Rand>,
+    game_config: &Res<GameConfig>,
 ) {
-    let tone_sprite = rng.gen_range(0..SUPERVISOR_SPRITES.len());
-    let texture_handle: Handle<Image> = asset_server.load(SUPERVISOR_SPRITES[tone_sprite]);
-    let atlas_layout = TextureAtlasLayout::from_grid(PLAYER_SPRITE_SIZE, 2, 1, None, None);
+    let texture_pack = game_config.get_texture_pack();
+    let supervisor_sprites = &texture_pack.supervisor;
+    let tone_sprite = rng.gen_range(0..supervisor_sprites.len());
+    let supervisor_sprite = &supervisor_sprites[tone_sprite];
+    let texture_handle: Handle<Image> =
+        asset_server.load(&format!("{}/{}", texture_pack.root, supervisor_sprite.path));
+    let sprite_size = supervisor_sprite
+        .cell_resolution
+        .expect("Supervisor sprite must have a cell resolution")
+        .as_vec2();
+    let grid_dimensions = supervisor_sprite
+        .grid_dimensions
+        .expect("SuperVisor sprite must have grid dimensions");
+    let frame_count = grid_dimensions.x * grid_dimensions.y;
+    let atlas_layout = TextureAtlasLayout::from_grid(
+        sprite_size,
+        grid_dimensions.x as usize,
+        grid_dimensions.y as usize,
+        None,
+        None,
+    );
     let animation_indices = AnimationData {
         start_frame: 0,
-        frame_count: 2,
+        frame_count: frame_count as usize,
         pause: true,
         facing_direction: FacingDirection::Down,
     };
@@ -33,7 +52,10 @@ pub fn spawn_supervisor(
     commands.spawn((
         SpriteSheetBundle {
             sprite: Sprite {
-                custom_size: Some(Vec2::new(PLAYER_SIZE, PLAYER_SIZE)),
+                custom_size: Some(Vec2::new(
+                    game_config.supervisor_config.size,
+                    game_config.supervisor_config.size,
+                )),
                 ..default()
             },
             atlas: TextureAtlas {
@@ -60,11 +82,11 @@ pub fn spawn_supervisor(
 pub fn update_supervisor(
     mut supervisor_query: Query<(&mut Transform, &mut AnimationData, &mut Supervisor)>,
     time: Res<Time>,
-    app_settings: Res<AppSettings>,
-    game_settings: Res<GameSettings>,
+    app_config: Res<AppConfig>,
+    game_config: Res<GameConfig>,
 ) {
     let supervisor_offscreen_distraction_pos =
-        (app_settings.base_resolution.y / 2.) + (PLAYER_SIZE / 2.);
+        (app_config.base_resolution.y as f32 / 2.) + (game_config.supervisor_config.size / 2.);
 
     for (mut supervisor_transform, mut supervisor_anim_data, mut supervisor) in
         &mut supervisor_query
@@ -88,10 +110,10 @@ pub fn update_supervisor(
         if monitoring {
             // supervisor "distraction" complete, return to monitoring
             let t = supervisor.monitoring_timer.fraction() / 0.4;
-            supervisor_transform.translation.y = supervisor_transform
-                .translation
-                .y
-                .lerp(game_settings.supervisor_monitoring_y_pos, t.clamp(0., 1.));
+            supervisor_transform.translation.y = supervisor_transform.translation.y.lerp(
+                game_config.supervisor_config.monitoring_y_pos,
+                t.clamp(0., 1.),
+            );
             supervisor_anim_data.facing_direction = FacingDirection::Down;
         } else {
             // supervisor monitoring complete, "distract" them

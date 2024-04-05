@@ -1,13 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{PlayerControls, MULTIPLIER_DECREASE_PER_SECOND};
-
-#[derive(Resource)]
-pub struct GameSettings {
-    pub player_move_speed: f32,
-    pub player_sprint_move_modifier: f32,
-    pub supervisor_monitoring_y_pos: f32,
-}
+use crate::{GameConfig, PlayerControls};
 
 pub struct PlayerScoreData {
     pub score: f32,
@@ -28,14 +21,18 @@ pub struct TeamScoreTag;
 #[derive(Component)]
 pub struct PlayerScoreTag;
 
-pub fn update_score_multipiers(mut game_state: ResMut<GameState>, time: Res<Time>) {
+pub fn update_score_multipiers(
+    mut game_state: ResMut<GameState>,
+    time: Res<Time>,
+    game_config: Res<GameConfig>,
+) {
     for player_data in &mut game_state.player_scores {
         player_data
             .multiplier_decrement_freeze_timer
             .tick(time.delta());
         if player_data.multiplier_decrement_freeze_timer.finished() {
             player_data.multiplier = (player_data.multiplier
-                - MULTIPLIER_DECREASE_PER_SECOND * time.delta_seconds())
+                - game_config.score_config.multiplier_decrease_per_second * time.delta_seconds())
             .clamp(1., f32::INFINITY);
         }
     }

@@ -3,7 +3,7 @@ use bevy::{
     prelude::*,
 };
 
-use crate::{Conveyor, Package, FRICTION};
+use crate::{Conveyor, GameConfig, Package};
 
 pub enum Collision {
     Left,
@@ -13,7 +13,7 @@ pub enum Collision {
     Inside,
 }
 
-#[derive(Component)]
+#[derive(Default, Component)]
 pub struct Collider {
     pub size: Vec2,
 }
@@ -143,12 +143,13 @@ pub fn react_to_basic_collisions(
 pub fn update_velocities(
     mut velocity_query: Query<(&mut Transform, &mut Velocity)>,
     time: Res<Time>,
+    game_config: Res<GameConfig>,
 ) {
     for (mut transform, mut velocity) in &mut velocity_query {
         transform.translation += velocity.0.extend(0.) * time.delta_seconds();
 
         let norm = velocity.0.normalize_or_zero();
-        let deceleration_due_to_friction = norm.abs() * FRICTION * time.delta_seconds();
+        let deceleration_due_to_friction = norm.abs() * game_config.friction * time.delta_seconds();
         velocity.0 = velocity.0.signum()
             * (velocity.0.abs() - deceleration_due_to_friction).clamp(Vec2::ZERO, Vec2::INFINITY);
     }

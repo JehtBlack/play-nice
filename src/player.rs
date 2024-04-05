@@ -4,8 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     random::*, AnimationData, Collider, CollisionEvent, Conveyor, ConveyorLabelTag, EntityLayer,
-    FacingDirection, GameSettings, GameState, Package, PlayerIndex, RenderLayers, Velocity,
-    PLAYER_SIZE, PLAYER_SPRITES, PLAYER_SPRITE_SIZE, THROW_POWER,
+    FacingDirection, GameConfig, GameState, Package, PlayerIndex, RenderLayers, Velocity,
 };
 
 pub enum PlayAreaAligment {
@@ -42,13 +41,32 @@ pub fn spawn_player(
     player_pos: Vec3,
     player_index: PlayerIndex,
     rng: &mut ResMut<Rand>,
+    game_config: &Res<GameConfig>,
 ) {
-    let tone_sprite = rng.gen_range(0..PLAYER_SPRITES.len());
-    let texture_handle: Handle<Image> = asset_server.load(PLAYER_SPRITES[tone_sprite]);
-    let atlas_layout = TextureAtlasLayout::from_grid(PLAYER_SPRITE_SIZE, 4, 1, None, None);
+    let texture_pack = game_config.get_texture_pack();
+    let player_sprites = &texture_pack.player;
+    let tone_sprite = rng.gen_range(0..player_sprites.len());
+    let player_sprite = &player_sprites[tone_sprite];
+    let texture_handle: Handle<Image> =
+        asset_server.load(&format!("{}/{}", texture_pack.root, player_sprite.path));
+    let sprite_size = player_sprite
+        .cell_resolution
+        .expect("Player sprite must have a cell resolution")
+        .as_vec2();
+    let sprite_grid = player_sprite
+        .grid_dimensions
+        .expect("Player sprite must have grid dimensions");
+    let frame_count = sprite_grid.x * sprite_grid.y;
+    let atlas_layout = TextureAtlasLayout::from_grid(
+        sprite_size,
+        sprite_grid.x as usize,
+        sprite_grid.y as usize,
+        None,
+        None,
+    );
     let animation_indices = AnimationData {
         start_frame: 0,
-        frame_count: 4,
+        frame_count: frame_count as usize,
         pause: true,
         facing_direction: FacingDirection::Down,
     };
@@ -56,7 +74,10 @@ pub fn spawn_player(
         .spawn((
             SpriteSheetBundle {
                 sprite: Sprite {
-                    custom_size: Some(Vec2::new(PLAYER_SIZE, PLAYER_SIZE)),
+                    custom_size: Some(Vec2::new(
+                        game_config.player_config.size,
+                        game_config.player_config.size,
+                    )),
                     ..default()
                 },
                 atlas: TextureAtlas {
@@ -76,7 +97,10 @@ pub fn spawn_player(
                 player_index: player_index,
             },
             Collider {
-                size: Vec2::new(PLAYER_SIZE, PLAYER_SIZE),
+                size: Vec2::new(
+                    game_config.player_config.size,
+                    game_config.player_config.size,
+                ),
             },
             RenderLayers::Single(EntityLayer::Player),
             animation_indices,
@@ -85,7 +109,10 @@ pub fn spawn_player(
             builder.spawn((
                 SpriteBundle {
                     sprite: Sprite {
-                        custom_size: Some(Vec2::new(PLAYER_SIZE * 1.2, PLAYER_SIZE * 1.2)),
+                        custom_size: Some(Vec2::new(
+                            game_config.player_config.size * 1.2,
+                            game_config.player_config.size * 1.2,
+                        )),
                         color: player_index.into(),
                         ..default()
                     },
@@ -102,7 +129,7 @@ pub fn spawn_player(
 
 pub fn move_player(
     game_state: Res<GameState>,
-    game_settings: Res<GameSettings>,
+    game_config: Res<GameConfig>,
     mut query: Query<(&mut Transform, &mut AnimationData, &Player), With<Player>>,
     time: Res<Time>,
 ) {
@@ -132,9 +159,9 @@ pub fn move_player(
 
         new_facing_direction.map(|f| player_anim_data.facing_direction = f);
         player_transform.translation += direction.normalize_or_zero().extend(0.)
-            * game_settings.player_move_speed
+            * game_config.player_config.move_speed
             * if sprinting {
-                game_settings.player_sprint_move_modifier
+                game_config.player_config.sprint_move_modifier
             } else {
                 1.
             }
@@ -158,6 +185,7 @@ pub fn pickup_package(
     >,
     mut conveyor_query: Query<(Entity, &mut Conveyor, &ConveyorLabelTag)>,
     game_state: Res<GameState>,
+    game_config: Res<GameConfig>,
 ) {
     let mut players_that_have_picked_up_a_package_this_frame = HashSet::<Entity>::new();
     for event in collision_events.read() {
@@ -234,7 +262,8 @@ pub fn pickup_package(
                 {
                     // pick up the package
                     package_velocity.0 = Vec2::ZERO;
-                    package_transform.translation = Vec3::new(0., PLAYER_SIZE / 2., 0.);
+                    package_transform.translation =
+                        Vec3::new(0., game_config.player_config.size / 2., 0.);
                     match package_layers.as_mut() {
                         RenderLayers::Multi(layers) => {
                             layers.insert(EntityLayer::HeldObject);
@@ -266,6 +295,7 @@ pub fn throw_package(
         (With<Package>, Without<Player>),
     >,
     game_state: Res<GameState>,
+    game_config: Res<GameConfig>,
 ) {
     for (
         package_entity,
@@ -311,7 +341,8 @@ pub fn throw_package(
             // calculate throw distance
             package_transform.translation =
                 player_transform.translation + current_relative_position;
-            let throw_distance = player_info.throw_timer.fraction() * THROW_POWER;
+            let throw_distance =
+                player_info.throw_timer.fraction() * game_config.player_config.throw_power;
 
             let mut direction = player_anim_data.facing_direction.as_vector();
             if player_control_state.move_up.pressed() {

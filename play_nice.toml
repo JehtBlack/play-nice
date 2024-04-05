@@ -1,0 +1,156 @@
+[app]
+base_resolution = [
+    1280,
+    720,
+]
+rng_seed = 1000
+
+[game]
+selected_texture_pack = "default"
+friction = 100.0
+
+[game.texture_packs.default]
+root = "sprites"
+
+[[game.texture_packs.default.player]]
+path = "player_skin_tone_a.png"
+grid_dimensions = [
+    4,
+    1,
+]
+cell_resolution = [
+    128,
+    128,
+]
+
+[[game.texture_packs.default.player]]
+path = "player_skin_tone_b.png"
+grid_dimensions = [
+    4,
+    1,
+]
+cell_resolution = [
+    128,
+    128,
+]
+
+[[game.texture_packs.default.player]]
+path = "player_skin_tone_c.png"
+grid_dimensions = [
+    4,
+    1,
+]
+cell_resolution = [
+    128,
+    128,
+]
+
+[[game.texture_packs.default.player]]
+path = "player_skin_tone_d.png"
+grid_dimensions = [
+    4,
+    1,
+]
+cell_resolution = [
+    128,
+    128,
+]
+
+[[game.texture_packs.default.supervisor]]
+path = "supervisor_skin_tone_a.png"
+grid_dimensions = [
+    2,
+    1,
+]
+cell_resolution = [
+    128,
+    128,
+]
+
+[[game.texture_packs.default.supervisor]]
+path = "supervisor_skin_tone_b.png"
+grid_dimensions = [
+    2,
+    1,
+]
+cell_resolution = [
+    128,
+    128,
+]
+
+[[game.texture_packs.default.supervisor]]
+path = "supervisor_skin_tone_c.png"
+grid_dimensions = [
+    2,
+    1,
+]
+cell_resolution = [
+    128,
+    128,
+]
+
+[[game.texture_packs.default.supervisor]]
+path = "supervisor_skin_tone_d.png"
+grid_dimensions = [
+    2,
+    1,
+]
+cell_resolution = [
+    128,
+    128,
+]
+
+[game.texture_packs.default.package]
+path = "box.png"
+
+[game.texture_packs.default.conveyor]
+path = "conveyor.png"
+grid_dimensions = [
+    5,
+    1,
+]
+cell_resolution = [
+    128,
+    128,
+]
+
+[game.texture_packs.default.background]
+path = "background.png"
+
+[game.texture_packs.default.supervisor_office]
+path = "supervisor_office.png"
+
+[game.texture_packs.default.score_display]
+path = "display.png"
+
+[game.player_config]
+size = 30.0
+move_speed = 150.0
+sprint_move_modifier = 2.0
+throw_power = 100.0
+
+[game.supervisor_config]
+size = 30.0
+monitoring_y_pos = 285.0
+office_sprite_size = [
+    400,
+    150,
+]
+
+[game.conveyor_config]
+size = [
+    128.0,
+    500.0,
+]
+speed = 100.0
+border_size = 14.0
+blinker_size = 20.0
+blink_duration_seconds = 0.10000000149011612
+
+[game.package_config]
+size = 30.0
+base_score_value = 5.0
+
+[game.score_config]
+multiplier_increase_per_package = 0.10000000149011612
+multiplier_decrease_per_second = 0.10000000149011612

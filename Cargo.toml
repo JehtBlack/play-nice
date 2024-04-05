@@ -16,6 +16,7 @@ ordered-float = "4.2.0"
 rand = "0.8.5"
 rand_chacha = "0.3.1"
 rayon = "1.10.0"
+serde = "1.0.197"
 toml = "0.8.12"
 
 
