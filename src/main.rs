@@ -80,60 +80,28 @@ fn main() -> anyhow::Result<()> {
             player_controls: enum_map! {
                 PlayerIndex::Player1 => PlayerControls {
                     pad: None,
-                    mapping: ControlMapping {
-                        move_up: ButtonMapping {
-                            keyboard_key: KeyCode::KeyW,
-                            gamepad_button: Some(GamepadButtonType::DPadUp),
-                            gamepad_axis: Some(GamepadAxisType::LeftStickY),
-                        },
-                        move_down: ButtonMapping {
-                            keyboard_key: KeyCode::KeyS,
-                            gamepad_button: Some(GamepadButtonType::DPadDown),
-                            gamepad_axis: Some(GamepadAxisType::LeftStickY),
-                        },
-                        move_left: ButtonMapping {
-                            keyboard_key: KeyCode::KeyA,
-                            gamepad_button: Some(GamepadButtonType::DPadLeft),
-                            gamepad_axis: Some(GamepadAxisType::LeftStickX),
-                        },
-                        move_right: ButtonMapping {
-                            keyboard_key: KeyCode::KeyD,
-                            gamepad_button: Some(GamepadButtonType::DPadRight),
-                            gamepad_axis: Some(GamepadAxisType::LeftStickX),
-                        },
-                        sprint: ButtonMapping {
-                            keyboard_key: KeyCode::ShiftLeft,
-                            gamepad_button: Some(GamepadButtonType::LeftTrigger),
-                            gamepad_axis: Some(GamepadAxisType::LeftZ),
-                        },
-                        pickup_or_throw: ButtonMapping {
-                            keyboard_key: KeyCode::Space,
-                            gamepad_button: Some(GamepadButtonType::RightTrigger),
-                            gamepad_axis: Some(GamepadAxisType::RightZ),
-                        },
-                    },
-                    state: ControlState {
-                        move_up: ButtonState {
+                    state: enum_map! {
+                        KeyAction::MoveUp => ButtonState {
                             pressed: false,
                             state_changed_this_frame: false,
                         },
-                        move_down: ButtonState {
+                        KeyAction::MoveDown => ButtonState {
                             pressed: false,
                             state_changed_this_frame: false,
                         },
-                        move_left: ButtonState {
+                        KeyAction::MoveLeft => ButtonState {
                             pressed: false,
                             state_changed_this_frame: false,
                         },
-                        move_right: ButtonState {
+                        KeyAction::MoveRight => ButtonState {
                             pressed: false,
                             state_changed_this_frame: false,
                         },
-                        sprint: ButtonState {
+                        KeyAction::Sprint => ButtonState {
                             pressed: false,
                             state_changed_this_frame: false,
                         },
-                        pickup_or_throw: ButtonState {
+                        KeyAction::PickupOrThrow => ButtonState {
                             pressed: false,
                             state_changed_this_frame: false,
                         },
@@ -141,60 +109,28 @@ fn main() -> anyhow::Result<()> {
                 },
                 PlayerIndex::Player2 => PlayerControls {
                     pad: None,
-                    mapping: ControlMapping {
-                        move_up: ButtonMapping {
-                            keyboard_key: KeyCode::ArrowUp,
-                            gamepad_button: Some(GamepadButtonType::DPadUp),
-                            gamepad_axis: Some(GamepadAxisType::LeftStickY),
-                        },
-                        move_down: ButtonMapping {
-                            keyboard_key: KeyCode::ArrowDown,
-                            gamepad_button: Some(GamepadButtonType::DPadDown),
-                            gamepad_axis: Some(GamepadAxisType::LeftStickY),
-                        },
-                        move_left: ButtonMapping {
-                            keyboard_key: KeyCode::ArrowLeft,
-                            gamepad_button: Some(GamepadButtonType::DPadLeft),
-                            gamepad_axis: Some(GamepadAxisType::LeftStickX),
-                        },
-                        move_right: ButtonMapping {
-                            keyboard_key: KeyCode::ArrowRight,
-                            gamepad_button: Some(GamepadButtonType::DPadRight),
-                            gamepad_axis: Some(GamepadAxisType::LeftStickX),
-                        },
-                        sprint: ButtonMapping {
-                            keyboard_key: KeyCode::ShiftRight,
-                            gamepad_button: Some(GamepadButtonType::LeftTrigger),
-                            gamepad_axis: Some(GamepadAxisType::LeftZ),
-                        },
-                        pickup_or_throw: ButtonMapping {
-                            keyboard_key: KeyCode::ControlRight,
-                            gamepad_button: Some(GamepadButtonType::RightTrigger),
-                            gamepad_axis: Some(GamepadAxisType::RightZ),
-                        },
-                    },
-                    state: ControlState {
-                        move_up: ButtonState {
+                    state: enum_map! {
+                        KeyAction::MoveUp => ButtonState {
                             pressed: false,
                             state_changed_this_frame: false,
                         },
-                        move_down: ButtonState {
+                        KeyAction::MoveDown => ButtonState {
                             pressed: false,
                             state_changed_this_frame: false,
                         },
-                        move_left: ButtonState {
+                        KeyAction::MoveLeft => ButtonState {
                             pressed: false,
                             state_changed_this_frame: false,
                         },
-                        move_right: ButtonState {
+                        KeyAction::MoveRight => ButtonState {
                             pressed: false,
                             state_changed_this_frame: false,
                         },
-                        sprint: ButtonState {
+                        KeyAction::Sprint => ButtonState {
                             pressed: false,
                             state_changed_this_frame: false,
                         },
-                        pickup_or_throw: ButtonState {
+                        KeyAction::PickupOrThrow => ButtonState {
                             pressed: false,
                             state_changed_this_frame: false,
                         },

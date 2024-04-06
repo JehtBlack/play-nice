@@ -152,11 +152,119 @@ cell_resolution = [
     128,
 ]
 
+[game.player_config.per_player.Player1.key_map.MoveUp.priamry]
+Key = "KeyW"
+
+[game.player_config.per_player.Player1.key_map.MoveUp.secondary]
+ControllerAxis = [
+    "LeftStickY",
+    "Positive",
+]
+
+[game.player_config.per_player.Player1.key_map.MoveDown.priamry]
+Key = "KeyS"
+
+[game.player_config.per_player.Player1.key_map.MoveDown.secondary]
+ControllerAxis = [
+    "LeftStickY",
+    "Negative",
+]
+
+[game.player_config.per_player.Player1.key_map.MoveLeft.priamry]
+Key = "KeyA"
+
+[game.player_config.per_player.Player1.key_map.MoveLeft.secondary]
+ControllerAxis = [
+    "LeftStickX",
+    "Negative",
+]
+
+[game.player_config.per_player.Player1.key_map.MoveRight.priamry]
+Key = "KeyD"
+
+[game.player_config.per_player.Player1.key_map.MoveRight.secondary]
+ControllerAxis = [
+    "LeftStickX",
+    "Positive",
+]
+
+[game.player_config.per_player.Player1.key_map.Sprint.priamry]
+Key = "ShiftLeft"
+
+[game.player_config.per_player.Player1.key_map.Sprint.secondary]
+ControllerAxis = [
+    "LeftZ",
+    "Positive",
+]
+
+[game.player_config.per_player.Player1.key_map.PickupOrThrow.priamry]
+Key = "Space"
+
+[game.player_config.per_player.Player1.key_map.PickupOrThrow.secondary]
+ControllerAxis = [
+    "RightZ",
+    "Positive",
+]
+
 [game.player_config.per_player.Player2.colour.RgbaLinear]
 red = 0.30000001192092896
 green = 0.30000001192092896
 blue = 1.600000023841858
 alpha = 1.0
+
+[game.player_config.per_player.Player2.key_map.MoveUp.priamry]
+Key = "ArrowUp"
+
+[game.player_config.per_player.Player2.key_map.MoveUp.secondary]
+ControllerAxis = [
+    "LeftStickY",
+    "Positive",
+]
+
+[game.player_config.per_player.Player2.key_map.MoveDown.priamry]
+Key = "ArrowDown"
+
+[game.player_config.per_player.Player2.key_map.MoveDown.secondary]
+ControllerAxis = [
+    "LeftStickY",
+    "Negative",
+]
+
+[game.player_config.per_player.Player2.key_map.MoveLeft.priamry]
+Key = "ArrowLeft"
+
+[game.player_config.per_player.Player2.key_map.MoveLeft.secondary]
+ControllerAxis = [
+    "LeftStickX",
+    "Negative",
+]
+
+[game.player_config.per_player.Player2.key_map.MoveRight.priamry]
+Key = "ArrowRight"
+
+[game.player_config.per_player.Player2.key_map.MoveRight.secondary]
+ControllerAxis = [
+    "LeftStickX",
+    "Positive",
+]
+
+[game.player_config.per_player.Player2.key_map.Sprint.priamry]
+Key = "ShiftRight"
+
+[game.player_config.per_player.Player2.key_map.Sprint.secondary]
+ControllerAxis = [
+    "LeftZ",
+    "Positive",
+]
+
+[game.player_config.per_player.Player2.key_map.PickupOrThrow.priamry]
+Key = "ControlRight"
+
+[game.player_config.per_player.Player2.key_map.PickupOrThrow.secondary]
+ControllerAxis = [
+    "RightZ",
+    "Positive",
+]
 
 [game.supervisor_config]
 size = 30.0

@@ -4,8 +4,8 @@ use bevy::prelude::*;
 
 use crate::{
     random::*, AnimationData, Collider, CollisionEvent, Conveyor, ConveyorLabelTag, EntityLayer,
-    FacingDirection, GameConfig, GameState, Package, PlayerIndex, RenderLayers, TextureTarget,
-    Velocity,
+    FacingDirection, GameConfig, GameState, KeyAction, Package, PlayerIndex, RenderLayers,
+    TextureTarget, Velocity,
 };
 
 pub enum PlayAreaAligment {
@@ -142,23 +142,23 @@ pub fn move_player(
 ) {
     for (mut player_transform, mut player_anim_data, player_data) in &mut query {
         let player_control_state = &game_state.player_controls[player_data.player_index].state;
-        let sprinting = player_control_state.sprint.pressed();
+        let sprinting = player_control_state[KeyAction::Sprint].pressed();
         // bias to facing horizontally TODO: remove this bias
         let mut new_facing_direction: Option<FacingDirection> = None;
         let mut direction: Vec2 = Vec2::ZERO;
 
-        if player_control_state.move_up.pressed() {
+        if player_control_state[KeyAction::MoveUp].pressed() {
             new_facing_direction = Some(FacingDirection::Up);
             direction.y = 1.;
-        } else if player_control_state.move_down.pressed() {
+        } else if player_control_state[KeyAction::MoveDown].pressed() {
             new_facing_direction = Some(FacingDirection::Down);
             direction.y = -1.;
         }
 
-        if player_control_state.move_left.pressed() {
+        if player_control_state[KeyAction::MoveLeft].pressed() {
             new_facing_direction = Some(FacingDirection::Left);
             direction.x = -1.;
-        } else if player_control_state.move_right.pressed() {
+        } else if player_control_state[KeyAction::MoveRight].pressed() {
             new_facing_direction = Some(FacingDirection::Right);
             direction.x = 1.;
         }
@@ -199,9 +199,8 @@ pub fn pickup_package(
             .iter_mut()
             .find(|(p, _, _)| p == &event.entity_a || p == &event.entity_b)
         {
-            let player_wants_to_pickup = game_state.player_controls[player_info.player_index]
-                .state
-                .pickup_or_throw
+            let player_wants_to_pickup = game_state.player_controls[player_info.player_index].state
+                [KeyAction::PickupOrThrow]
                 .just_pressed();
             if !player_wants_to_pickup {
                 continue;
@@ -321,7 +320,8 @@ pub fn throw_package(
             .find(|(p, _, _, _)| p == &package_parent.get())
         {
             let player_control_state = &game_state.player_controls[player_info.player_index].state;
-            let player_wants_to_throw = player_control_state.pickup_or_throw.just_released();
+            let player_wants_to_throw =
+                player_control_state[KeyAction::PickupOrThrow].just_released();
 
             if !player_wants_to_throw {
                 continue;
@@ -349,15 +349,15 @@ pub fn throw_package(
                 player_info.throw_timer.fraction() * game_config.player_config.throw_power;
 
             let mut direction = player_anim_data.facing_direction.as_vector();
-            if player_control_state.move_up.pressed() {
+            if player_control_state[KeyAction::MoveUp].pressed() {
                 direction.y = 1.;
-            } else if player_control_state.move_down.pressed() {
+            } else if player_control_state[KeyAction::MoveDown].pressed() {
                 direction.y = -1.;
             }
 
-            if player_control_state.move_left.pressed() {
+            if player_control_state[KeyAction::MoveLeft].pressed() {
                 direction.x = -1.;
-            } else if player_control_state.move_right.pressed() {
+            } else if player_control_state[KeyAction::MoveRight].pressed() {
                 direction.x = 1.;
             }
 
@@ -374,9 +374,7 @@ pub fn player_charge_throw(
     for (mut player_info, player_children) in &mut player_query {
         player_info.pickup_cooldown_timer.tick(time.delta());
         if player_children.len() > 0
-            && game_state.player_controls[player_info.player_index]
-                .state
-                .pickup_or_throw
+            && game_state.player_controls[player_info.player_index].state[KeyAction::PickupOrThrow]
                 .pressed()
             && player_info.pickup_cooldown_timer.finished()
         {

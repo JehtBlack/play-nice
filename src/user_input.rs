@@ -1,24 +1,9 @@
+use crate::{GameConfig, GameState, KeyAction, KeyBind};
 use bevy::{
     input::gamepad::{GamepadConnection, GamepadEvent},
     prelude::*,
 };
-
-use crate::GameState;
-
-pub struct ButtonMapping {
-    pub keyboard_key: KeyCode,
-    pub gamepad_button: Option<GamepadButtonType>,
-    pub gamepad_axis: Option<GamepadAxisType>,
-}
-
-pub struct ControlMapping {
-    pub move_up: ButtonMapping,
-    pub move_down: ButtonMapping,
-    pub move_left: ButtonMapping,
-    pub move_right: ButtonMapping,
-    pub sprint: ButtonMapping,
-    pub pickup_or_throw: ButtonMapping,
-}
+use enum_map::{enum_map, EnumMap};
 
 #[derive(Clone, Copy)]
 pub struct ButtonState {
@@ -38,8 +23,7 @@ pub struct ControlState {
 
 pub struct PlayerControls {
     pub pad: Option<Gamepad>,
-    pub mapping: ControlMapping,
-    pub state: ControlState,
+    pub state: EnumMap<KeyAction, ButtonState>,
 }
 
 impl ButtonState {
@@ -101,158 +85,101 @@ pub fn update_controller_mappings(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     gamepad_buttons: Res<ButtonInput<GamepadButton>>,
     gamepad_axes: Res<Axis<GamepadAxis>>,
+    game_config: Res<GameConfig>,
 ) {
     const GAMEPAD_AXIS_THRESHOLD: f32 = 0.5;
 
-    for (_, player_control) in game_state.player_controls.iter_mut() {
+    for (player_index, player_control) in game_state.player_controls.iter_mut() {
+        fn write_button_state(
+            keybind: &KeyBind,
+            button_state: &mut ButtonState,
+            keyboard_input: &Res<ButtonInput<KeyCode>>,
+            gamepad_buttons: &Res<ButtonInput<GamepadButton>>,
+            gamepad_axes: &Res<Axis<GamepadAxis>>,
+            pad: Option<Gamepad>,
+        ) {
+            match keybind {
+                crate::KeyBind::Key(key_code) => {
+                    button_state.pressed |= keyboard_input.pressed(*key_code);
+                }
+                crate::KeyBind::ControllerButton(pad_button) => {
+                    if let Some(pad) = pad {
+                        button_state.pressed |= gamepad_buttons.pressed(GamepadButton {
+                            gamepad: pad,
+                            button_type: *pad_button,
+                        });
+                    }
+                }
+                crate::KeyBind::ControllerAxis((pad_axis, axis_direction)) => {
+                    if let Some(pad) = pad {
+                        button_state.pressed |= gamepad_axes
+                            .get(GamepadAxis {
+                                gamepad: pad,
+                                axis_type: *pad_axis,
+                            })
+                            .map_or(false, |v| match axis_direction {
+                                crate::AxisDirection::Positive => v > GAMEPAD_AXIS_THRESHOLD,
+                                crate::AxisDirection::Negative => v < -GAMEPAD_AXIS_THRESHOLD,
+                            });
+                    }
+                }
+            }
+        }
+
         let prev_control_state = player_control.state.clone();
-        let mut new_control_state = ControlState {
-            move_up: ButtonState {
+        let mut new_control_state = enum_map! {
+            KeyAction::MoveUp => ButtonState {
                 pressed: false,
                 state_changed_this_frame: false,
             },
-            move_down: ButtonState {
+            KeyAction::MoveDown => ButtonState {
                 pressed: false,
                 state_changed_this_frame: false,
             },
-            move_left: ButtonState {
+            KeyAction::MoveLeft => ButtonState {
                 pressed: false,
                 state_changed_this_frame: false,
             },
-            move_right: ButtonState {
+            KeyAction::MoveRight => ButtonState {
                 pressed: false,
                 state_changed_this_frame: false,
             },
-            sprint: ButtonState {
+            KeyAction::Sprint => ButtonState {
                 pressed: false,
                 state_changed_this_frame: false,
             },
-            pickup_or_throw: ButtonState {
+            KeyAction::PickupOrThrow => ButtonState {
                 pressed: false,
                 state_changed_this_frame: false,
             },
         };
 
-        if let Some(pad) = player_control.pad {
-            if let Some(axis) = player_control.mapping.move_up.gamepad_axis {
-                new_control_state.move_up.pressed |= gamepad_axes
-                    .get(GamepadAxis {
-                        gamepad: pad,
-                        axis_type: axis,
-                    })
-                    .map_or(false, |v| v > GAMEPAD_AXIS_THRESHOLD);
-            }
-            if let Some(axis) = player_control.mapping.move_down.gamepad_axis {
-                new_control_state.move_down.pressed |= gamepad_axes
-                    .get(GamepadAxis {
-                        gamepad: pad,
-                        axis_type: axis,
-                    })
-                    .map_or(false, |v| v < -GAMEPAD_AXIS_THRESHOLD);
-            }
-            if let Some(axis) = player_control.mapping.move_left.gamepad_axis {
-                new_control_state.move_left.pressed |= gamepad_axes
-                    .get(GamepadAxis {
-                        gamepad: pad,
-                        axis_type: axis,
-                    })
-                    .map_or(false, |v| v < -GAMEPAD_AXIS_THRESHOLD);
-            }
-            if let Some(axis) = player_control.mapping.move_right.gamepad_axis {
-                new_control_state.move_right.pressed |= gamepad_axes
-                    .get(GamepadAxis {
-                        gamepad: pad,
-                        axis_type: axis,
-                    })
-                    .map_or(false, |v| v > GAMEPAD_AXIS_THRESHOLD);
-            }
-            if let Some(axis) = player_control.mapping.sprint.gamepad_axis {
-                new_control_state.sprint.pressed |= gamepad_axes
-                    .get(GamepadAxis {
-                        gamepad: pad,
-                        axis_type: axis,
-                    })
-                    .map_or(false, |v| v > GAMEPAD_AXIS_THRESHOLD);
-            }
-            if let Some(axis) = player_control.mapping.pickup_or_throw.gamepad_axis {
-                new_control_state.pickup_or_throw.pressed |= gamepad_axes
-                    .get(GamepadAxis {
-                        gamepad: pad,
-                        axis_type: axis,
-                    })
-                    .map_or(false, |v| v > GAMEPAD_AXIS_THRESHOLD);
-            }
+        let key_mapping = game_config.get_key_map(player_index);
+        let pad = player_control.pad;
 
-            if let Some(button) = player_control.mapping.move_up.gamepad_button {
-                new_control_state.move_up.pressed |= gamepad_buttons.pressed(GamepadButton {
-                    gamepad: pad,
-                    button_type: button,
-                });
-            }
-            if let Some(button) = player_control.mapping.move_down.gamepad_button {
-                new_control_state.move_down.pressed |= gamepad_buttons.pressed(GamepadButton {
-                    gamepad: pad,
-                    button_type: button,
-                });
-            }
-            if let Some(button) = player_control.mapping.move_left.gamepad_button {
-                new_control_state.move_left.pressed |= gamepad_buttons.pressed(GamepadButton {
-                    gamepad: pad,
-                    button_type: button,
-                });
-            }
-            if let Some(button) = player_control.mapping.move_right.gamepad_button {
-                new_control_state.move_right.pressed |= gamepad_buttons.pressed(GamepadButton {
-                    gamepad: pad,
-                    button_type: button,
-                });
-            }
-            if let Some(button) = player_control.mapping.sprint.gamepad_button {
-                new_control_state.sprint.pressed |= gamepad_buttons.pressed(GamepadButton {
-                    gamepad: pad,
-                    button_type: button,
-                });
-            }
-            if let Some(button) = player_control.mapping.pickup_or_throw.gamepad_button {
-                new_control_state.pickup_or_throw.pressed |=
-                    gamepad_buttons.pressed(GamepadButton {
-                        gamepad: pad,
-                        button_type: button,
-                    });
-            }
-        }
+        for (key_action, key_bind) in key_mapping {
+            let new_button_state = &mut new_control_state[key_action.clone()];
+            write_button_state(
+                &key_bind.priamry,
+                new_button_state,
+                &keyboard_input,
+                &gamepad_buttons,
+                &gamepad_axes,
+                pad,
+            );
 
-        if keyboard_input.pressed(player_control.mapping.move_up.keyboard_key) {
-            new_control_state.move_up.pressed |= true;
-        }
-        if keyboard_input.pressed(player_control.mapping.move_down.keyboard_key) {
-            new_control_state.move_down.pressed |= true;
-        }
-        if keyboard_input.pressed(player_control.mapping.move_left.keyboard_key) {
-            new_control_state.move_left.pressed |= true;
-        }
-        if keyboard_input.pressed(player_control.mapping.move_right.keyboard_key) {
-            new_control_state.move_right.pressed |= true;
-        }
-        if keyboard_input.pressed(player_control.mapping.sprint.keyboard_key) {
-            new_control_state.sprint.pressed |= true;
-        }
-        if keyboard_input.pressed(player_control.mapping.pickup_or_throw.keyboard_key) {
-            new_control_state.pickup_or_throw.pressed |= true;
-        }
+            write_button_state(
+                &key_bind.secondary,
+                new_button_state,
+                &keyboard_input,
+                &gamepad_buttons,
+                &gamepad_axes,
+                pad,
+            );
 
-        new_control_state.move_up.state_changed_this_frame =
-            new_control_state.move_up.pressed != prev_control_state.move_up.pressed;
-        new_control_state.move_down.state_changed_this_frame =
-            new_control_state.move_down.pressed != prev_control_state.move_down.pressed;
-        new_control_state.move_left.state_changed_this_frame =
-            new_control_state.move_left.pressed != prev_control_state.move_left.pressed;
-        new_control_state.move_right.state_changed_this_frame =
-            new_control_state.move_right.pressed != prev_control_state.move_right.pressed;
-        new_control_state.sprint.state_changed_this_frame =
-            new_control_state.sprint.pressed != prev_control_state.sprint.pressed;
-        new_control_state.pickup_or_throw.state_changed_this_frame =
-            new_control_state.pickup_or_throw.pressed != prev_control_state.pickup_or_throw.pressed;
+            new_button_state.state_changed_this_frame =
+                new_button_state.pressed != prev_control_state[key_action].pressed;
+        }
 
         player_control.state = new_control_state;
     }

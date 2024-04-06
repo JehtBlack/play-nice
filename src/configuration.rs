@@ -5,6 +5,11 @@ use std::{
 
 use bevy::{
     ecs::system::Resource,
+    input::{
+        gamepad::{GamepadAxisType, GamepadButtonType},
+        keyboard::KeyCode,
+        mouse::MouseButton,
+    },
     math::{UVec2, Vec2},
     render::color::Color,
 };
@@ -12,6 +17,35 @@ use enum_map::{enum_map, Enum, EnumMap};
 use serde::{Deserialize, Serialize};
 
 use crate::random::*;
+
+#[derive(Serialize, Deserialize)]
+pub enum AxisDirection {
+    Positive,
+    Negative,
+}
+
+#[derive(Serialize, Deserialize)]
+pub enum KeyBind {
+    Key(KeyCode),
+    ControllerButton(GamepadButtonType),
+    ControllerAxis((GamepadAxisType, AxisDirection)),
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct KeyBindConfig {
+    pub priamry: KeyBind,
+    pub secondary: KeyBind,
+}
+
+#[derive(Enum, Serialize, Deserialize, Clone)]
+pub enum KeyAction {
+    MoveUp,
+    MoveDown,
+    MoveLeft,
+    MoveRight,
+    Sprint,
+    PickupOrThrow,
+}
 
 #[derive(Enum, Serialize, Deserialize, PartialEq, Eq, Clone, Copy)]
 pub enum PlayerIndex {
@@ -53,6 +87,7 @@ pub struct TexturePack {
 pub struct PerPlayerConfig {
     pub colour: Color,
     pub sprite_override: Option<TextureValue>,
+    pub key_map: EnumMap<KeyAction, KeyBindConfig>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -220,11 +255,13 @@ impl Default for PlayerConfig {
                         path: "sprites/custom_player.png".to_string(),
                         grid_dimensions: Some(UVec2::new(4, 1)),
                         cell_resolution: Some(UVec2::new(128, 128)),
-                    }))
+                    })),
+                    key_map: default_key_map_player_one(),
                 },
                 PlayerIndex::Player2 => PerPlayerConfig {
                     colour: Color::rgb_linear(0.3, 0.3, 1.6),
-                    sprite_override: None
+                    sprite_override: None,
+                    key_map: default_key_map_player_two(),
                 },
             },
         }
@@ -325,6 +362,65 @@ impl GameConfig {
         self.texture_packs
             .get(&self.selected_texture_pack)
             .expect("Selected texture pack not found")
+    }
+
+    pub fn get_key_map(&self, player_index: PlayerIndex) -> &EnumMap<KeyAction, KeyBindConfig> {
+        &self.player_config.per_player[player_index].key_map
+    }
+}
+
+fn default_key_map_player_one() -> EnumMap<KeyAction, KeyBindConfig> {
+    default_key_map(PlayerIndex::Player1)
+}
+
+fn default_key_map_player_two() -> EnumMap<KeyAction, KeyBindConfig> {
+    default_key_map(PlayerIndex::Player2)
+}
+
+fn default_key_map(player_index: PlayerIndex) -> EnumMap<KeyAction, KeyBindConfig> {
+    enum_map! {
+        KeyAction::MoveUp => KeyBindConfig {
+            priamry: KeyBind::Key(match player_index {
+                PlayerIndex::Player1 => KeyCode::KeyW,
+                PlayerIndex::Player2 => KeyCode::ArrowUp,
+            }),
+            secondary: KeyBind::ControllerAxis((GamepadAxisType::LeftStickY, AxisDirection::Positive)),
+        },
+        KeyAction::MoveDown => KeyBindConfig {
+            priamry: KeyBind::Key(match player_index {
+                PlayerIndex::Player1 => KeyCode::KeyS,
+                PlayerIndex::Player2 => KeyCode::ArrowDown,
+            }),
+            secondary: KeyBind::ControllerAxis((GamepadAxisType::LeftStickY, AxisDirection::Negative)),
+        },
+        KeyAction::MoveLeft => KeyBindConfig {
+            priamry: KeyBind::Key(match player_index {
+                PlayerIndex::Player1 => KeyCode::KeyA,
+                PlayerIndex::Player2 => KeyCode::ArrowLeft,
+            }),
+            secondary: KeyBind::ControllerAxis((GamepadAxisType::LeftStickX, AxisDirection::Negative)),
+        },
+        KeyAction::MoveRight => KeyBindConfig {
+            priamry: KeyBind::Key(match player_index {
+                PlayerIndex::Player1 => KeyCode::KeyD,
+                PlayerIndex::Player2 => KeyCode::ArrowRight,
+            }),
+            secondary: KeyBind::ControllerAxis((GamepadAxisType::LeftStickX, AxisDirection::Positive)),
+        },
+        KeyAction::Sprint => KeyBindConfig {
+            priamry: KeyBind::Key(match player_index {
+                PlayerIndex::Player1 => KeyCode::ShiftLeft,
+                PlayerIndex::Player2 => KeyCode::ShiftRight,
+            }),
+            secondary: KeyBind::ControllerAxis((GamepadAxisType::LeftZ, AxisDirection::Positive)),
+        },
+        KeyAction::PickupOrThrow => KeyBindConfig {
+            priamry: KeyBind::Key(match player_index {
+                PlayerIndex::Player1 => KeyCode::Space,
+                PlayerIndex::Player2 => KeyCode::ControlRight,
+            }),
+            secondary: KeyBind::ControllerAxis((GamepadAxisType::RightZ, AxisDirection::Positive)),
+        },
     }
 }
 
