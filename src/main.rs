@@ -139,7 +139,10 @@ fn main() -> anyhow::Result<()> {
             },
         })
         .add_event::<CollisionEvent>()
-        .add_systems(Startup, setup)
+        .add_systems(
+            Startup,
+            (setup_camera, setup_world, setup_supervisor, setup_players),
+        )
         .add_systems(
             FixedUpdate,
             (
@@ -177,14 +180,7 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn setup(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
-    app_config: Res<AppConfig>,
-    game_config: Res<GameConfig>,
-    mut rng: ResMut<Rand>,
-) {
+fn setup_camera(mut commands: Commands, app_config: Res<AppConfig>) {
     // default projection has 0.1 near and 1000. far, but Camera2dBundle defaults to -1000. near and 1000. far
     // start with the bundle defaults and mutate the projection scaling mode
     let mut camera_bundle = Camera2dBundle::default();
@@ -193,7 +189,16 @@ fn setup(
         height: app_config.base_resolution.y as f32,
     };
     commands.spawn(camera_bundle);
+}
 
+fn setup_players(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    app_config: Res<AppConfig>,
+    game_config: Res<GameConfig>,
+    mut rng: ResMut<Rand>,
+) {
     spawn_player(
         &mut commands,
         &asset_server,
@@ -225,7 +230,15 @@ fn setup(
         &mut rng,
         &game_config,
     );
+}
 
+fn setup_world(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    game_config: Res<GameConfig>,
+    app_config: Res<AppConfig>,
+) {
     let conveyor_walkway_size = Vec2::new(
         game_config.conveyor_config.size.x * 2.,
         game_config.supervisor_config.office_sprite_size.y as f32,
@@ -285,6 +298,57 @@ fn setup(
         ConveyorLabelTag::Outgoing(PlayerIndex::Player2),
     );
 
+    spawn_walls(
+        &mut commands,
+        &app_config,
+        &game_config,
+        incoming_belt_length,
+    );
+
+    let conveyor_walkway_pos = Vec2::new(
+        0.,
+        -((app_config.base_resolution.y as f32 / 2.) - (conveyor_walkway_size.y / 2.)),
+    );
+
+    commands.spawn((
+        Transform::from_translation(conveyor_walkway_pos.extend(0.)),
+        Collider {
+            size: conveyor_walkway_size,
+        },
+        RenderLayers::Single(EntityLayer::Debugging),
+    ));
+
+    let texture_pack = game_config.get_texture_pack();
+    let background_sprite = texture_pack.choose_texture_for(TextureTarget::Background, None);
+    commands.spawn((
+        SpriteBundle {
+            sprite: Sprite {
+                custom_size: Some(Vec2::new(
+                    app_config.base_resolution.x as f32,
+                    app_config.base_resolution.y as f32,
+                )),
+                ..default()
+            },
+            transform: Transform {
+                translation: Vec3::new(0., 0., 0.),
+                ..default()
+            },
+            texture: asset_server
+                .load(&format!("{}/{}", texture_pack.root, background_sprite.path)),
+            ..default()
+        },
+        RenderLayers::Single(EntityLayer::Background),
+    ));
+}
+
+fn setup_supervisor(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    app_config: Res<AppConfig>,
+    game_config: Res<GameConfig>,
+    mut rng: ResMut<Rand>,
+) {
     spawn_supervisor(
         &mut commands,
         &asset_server,
@@ -292,13 +356,6 @@ fn setup(
         Vec3::new(0., game_config.supervisor_config.monitoring_y_pos, 0.),
         &mut rng,
         &game_config,
-    );
-
-    spawn_walls(
-        &mut commands,
-        &app_config,
-        &game_config,
-        incoming_belt_length,
     );
 
     let texture_pack = game_config.get_texture_pack();
@@ -431,40 +488,6 @@ fn setup(
                     ));
                 });
         });
-
-    let background_sprite = texture_pack.choose_texture_for(TextureTarget::Background, None);
-    commands.spawn((
-        SpriteBundle {
-            sprite: Sprite {
-                custom_size: Some(Vec2::new(
-                    app_config.base_resolution.x as f32,
-                    app_config.base_resolution.y as f32,
-                )),
-                ..default()
-            },
-            transform: Transform {
-                translation: Vec3::new(0., 0., 0.),
-                ..default()
-            },
-            texture: asset_server
-                .load(&format!("{}/{}", texture_pack.root, background_sprite.path)),
-            ..default()
-        },
-        RenderLayers::Single(EntityLayer::Background),
-    ));
-
-    let conveyor_walkway_pos = Vec2::new(
-        0.,
-        -((app_config.base_resolution.y as f32 / 2.) - (conveyor_walkway_size.y / 2.)),
-    );
-
-    commands.spawn((
-        Transform::from_translation(conveyor_walkway_pos.extend(0.)),
-        Collider {
-            size: conveyor_walkway_size,
-        },
-        RenderLayers::Single(EntityLayer::Debugging),
-    ));
 }
 
 fn spawn_walls(
