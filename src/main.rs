@@ -294,134 +294,12 @@ fn setup(
         &game_config,
     );
 
-    commands.spawn((
-        SpriteBundle {
-            sprite: Sprite {
-                anchor: Anchor::CenterLeft,
-                ..default()
-            },
-            transform: Transform::from_translation(
-                Vec2::new(app_config.base_resolution.x as f32 / 2., 0.).extend(0.),
-            ),
-            ..default()
-        },
-        Collider {
-            size: Vec2::new(10., app_config.base_resolution.y as f32),
-        },
-        WallTag,
-        RenderLayers::Single(EntityLayer::HeldObject),
-    ));
-
-    commands.spawn((
-        SpriteBundle {
-            sprite: Sprite {
-                anchor: Anchor::CenterRight,
-                ..default()
-            },
-            transform: Transform::from_translation(
-                Vec2::new(-(app_config.base_resolution.x as f32) / 2., 0.).extend(0.),
-            ),
-            ..default()
-        },
-        Collider {
-            size: Vec2::new(10., app_config.base_resolution.y as f32),
-        },
-        WallTag,
-        RenderLayers::Single(EntityLayer::HeldObject),
-    ));
-
-    commands.spawn((
-        SpriteBundle {
-            sprite: Sprite {
-                anchor: Anchor::CenterLeft,
-                ..default()
-            },
-            transform: Transform::from_translation(
-                Vec2::new(
-                    -game_config.conveyor_config.size.x + 10.,
-                    (incoming_belt_length / 2.)
-                        + (game_config.supervisor_config.office_sprite_size.y as f32 / 2.),
-                )
-                .extend(0.),
-            ),
-            ..default()
-        },
-        Collider {
-            size: Vec2::new(
-                10.,
-                game_config.supervisor_config.office_sprite_size.y as f32,
-            ),
-        },
-        WallTag,
-        RenderLayers::Single(EntityLayer::HeldObject),
-    ));
-
-    commands.spawn((
-        SpriteBundle {
-            sprite: Sprite {
-                anchor: Anchor::CenterRight,
-                ..default()
-            },
-            transform: Transform::from_translation(
-                Vec2::new(
-                    game_config.conveyor_config.size.x - 10.,
-                    (incoming_belt_length / 2.)
-                        + (game_config.supervisor_config.office_sprite_size.y as f32 / 2.),
-                )
-                .extend(0.),
-            ),
-            ..default()
-        },
-        Collider {
-            size: Vec2::new(
-                10.,
-                game_config.supervisor_config.office_sprite_size.y as f32,
-            ),
-        },
-        WallTag,
-        RenderLayers::Single(EntityLayer::HeldObject),
-    ));
-
-    commands.spawn((
-        SpriteBundle {
-            sprite: Sprite {
-                anchor: Anchor::BottomCenter,
-                ..default()
-            },
-            transform: Transform::from_translation(
-                Vec2::new(
-                    0.,
-                    (app_config.base_resolution.y as f32 / 2.)
-                        - (game_config.supervisor_config.office_sprite_size.y as f32 / 2.),
-                )
-                .extend(0.),
-            ),
-            ..default()
-        },
-        Collider {
-            size: Vec2::new(app_config.base_resolution.x as f32, 10.),
-        },
-        WallTag,
-        RenderLayers::Single(EntityLayer::HeldObject),
-    ));
-
-    commands.spawn((
-        SpriteBundle {
-            sprite: Sprite {
-                anchor: Anchor::TopCenter,
-                ..default()
-            },
-            transform: Transform::from_translation(
-                Vec2::new(0., -(app_config.base_resolution.y as f32) / 2.).extend(0.),
-            ),
-            ..default()
-        },
-        Collider {
-            size: Vec2::new(app_config.base_resolution.x as f32, 10.),
-        },
-        WallTag,
-        RenderLayers::Single(EntityLayer::HeldObject),
-    ));
+    spawn_walls(
+        &mut commands,
+        &app_config,
+        &game_config,
+        incoming_belt_length,
+    );
 
     let texture_pack = game_config.get_texture_pack();
     let display_sprite = texture_pack.choose_texture_for(TextureTarget::ScoreDisplay, None);
@@ -436,33 +314,33 @@ fn setup(
         -(game_config.supervisor_config.office_sprite_size.y as f32 / 2.),
     );
     let team_display_border: f32 = 6.;
-    let player_displays_size = [
-        Vec2::new(
+    let player_displays_size = enum_map! {
+        PlayerIndex::Player1 => Vec2::new(
             game_config.supervisor_config.office_sprite_size.x as f32 * 0.5,
             24.,
         ),
-        Vec2::new(
+        PlayerIndex::Player2 => Vec2::new(
             game_config.supervisor_config.office_sprite_size.x as f32 * 0.5,
             24.,
         ),
-    ];
-    let player_displays_pos = [
-        Vec2::new(
-            -(app_config.base_resolution.x as f32 / 2.) + (player_displays_size[0].x * 0.5),
+    };
+    let player_displays_pos = enum_map! {
+        PlayerIndex::Player1 => Vec2::new(
+            -(app_config.base_resolution.x as f32 / 2.) + (player_displays_size[PlayerIndex::Player1].x * 0.5),
             12.,
         ),
-        Vec2::new(
-            (app_config.base_resolution.x as f32 / 2.) - (player_displays_size[1].x * 0.5),
+        PlayerIndex::Player2 => Vec2::new(
+            (app_config.base_resolution.x as f32 / 2.) - (player_displays_size[PlayerIndex::Player2].x * 0.5),
             12.,
         ),
-    ];
+    };
 
-    let player_colours = [
-        game_config.player_config.per_player[PlayerIndex::Player1].colour,
-        game_config.player_config.per_player[PlayerIndex::Player2].colour,
-    ];
+    let player_configs = &game_config.player_config.per_player;
     let team_colour = game_config.team_colour;
-    let player_displays_border: [f32; 2] = [6., 6.];
+    let player_displays_border = enum_map! {
+        PlayerIndex::Player1 => 6.,
+        PlayerIndex::Player2 => 6.,
+    };
     let supervisor_office_sprite =
         texture_pack.choose_texture_for(TextureTarget::SupervisorOffice, None);
     commands
@@ -494,180 +372,61 @@ fn setup(
         ))
         .with_children(|builder| {
             builder
-                .spawn((
-                    SpriteBundle {
-                        sprite: Sprite {
-                            custom_size: Some(team_display_size),
-                            anchor: Anchor::BottomCenter,
-                            ..default()
-                        },
-                        transform: Transform {
-                            translation: team_display_pos.extend(0.),
-                            ..default()
-                        },
-                        texture: display_sprite_handle.clone(),
-                        ..default()
-                    },
-                    RenderLayers::Single(EntityLayer::OfficeLevelAccent),
+                .spawn(make_display_sprite(
+                    team_display_pos,
+                    team_display_size,
+                    Anchor::BottomCenter,
+                    &display_sprite_handle,
                 ))
                 .with_children(|builder| {
                     builder.spawn((
-                        Text2dBundle {
-                            text: Text::from_sections([
-                                TextSection::new(
-                                    "Team Score: ",
-                                    TextStyle {
-                                        font_size: 20.0,
-                                        color: team_colour,
-                                        ..default()
-                                    },
-                                ),
-                                TextSection::new(
-                                    "0",
-                                    TextStyle {
-                                        font_size: 20.0,
-                                        color: team_colour,
-                                        ..default()
-                                    },
-                                ),
-                            ])
-                            .with_justify(JustifyText::Right),
-                            text_anchor: Anchor::BottomRight,
-                            text_2d_bounds: Text2dBounds {
-                                size: Vec2::new(
-                                    team_display_size.x - (team_display_border * 2.),
-                                    team_display_size.y,
-                                ),
-                                ..default()
-                            },
-                            transform: Transform {
-                                translation: Vec3::new(
-                                    team_display_size.x / 2. - team_display_border,
-                                    0.,
-                                    100.,
-                                ),
-                                ..default()
-                            },
-                            ..default()
-                        },
+                        make_score_text(
+                            "Team Score: ",
+                            team_colour,
+                            team_display_size - Vec2::new(team_display_border * 2., 0.),
+                            team_display_size.x / 2. - team_display_border,
+                        ),
                         PlayerScoreTag::All,
                     ));
                 });
 
             builder
-                .spawn((
-                    SpriteBundle {
-                        sprite: Sprite {
-                            custom_size: Some(player_displays_size[0]),
-                            anchor: Anchor::BottomLeft,
-                            ..default()
-                        },
-                        transform: Transform {
-                            translation: player_displays_pos[0].extend(0.),
-                            ..default()
-                        },
-                        texture: display_sprite_handle.clone(),
-                        ..default()
-                    },
-                    RenderLayers::Single(EntityLayer::OfficeLevelAccent),
+                .spawn(make_display_sprite(
+                    player_displays_pos[PlayerIndex::Player1],
+                    player_displays_size[PlayerIndex::Player1],
+                    Anchor::BottomLeft,
+                    &display_sprite_handle,
                 ))
                 .with_children(|builder| {
                     builder.spawn((
-                        Text2dBundle {
-                            text: Text::from_sections([
-                                TextSection::new(
-                                    "Score: ",
-                                    TextStyle {
-                                        font_size: 20.0,
-                                        color: player_colours[0],
-                                        ..default()
-                                    },
-                                ),
-                                TextSection::new(
-                                    "0",
-                                    TextStyle {
-                                        font_size: 20.0,
-                                        color: player_colours[0],
-                                        ..default()
-                                    },
-                                ),
-                            ])
-                            .with_justify(JustifyText::Right),
-                            text_anchor: Anchor::BottomRight,
-                            text_2d_bounds: Text2dBounds {
-                                size: Vec2::new(
-                                    player_displays_size[0].x - (player_displays_border[0] * 2.),
-                                    player_displays_size[0].y,
-                                ),
-                                ..default()
-                            },
-                            transform: Transform {
-                                translation: Vec3::new(
-                                    player_displays_size[0].x - player_displays_border[0],
-                                    0.,
-                                    100.,
-                                ),
-                                ..default()
-                            },
-                            ..default()
-                        },
+                        make_score_text(
+                            "Score: ",
+                            player_configs[PlayerIndex::Player1].colour,
+                            player_displays_size[PlayerIndex::Player1]
+                                - Vec2::new(player_displays_border[PlayerIndex::Player1] * 2., 0.),
+                            player_displays_size[PlayerIndex::Player1].x / 2.
+                                - player_displays_border[PlayerIndex::Player1],
+                        ),
                         PlayerScoreTag::Player(PlayerIndex::Player1),
                     ));
                 });
 
             builder
-                .spawn((
-                    SpriteBundle {
-                        sprite: Sprite {
-                            custom_size: Some(player_displays_size[1]),
-                            anchor: Anchor::BottomRight,
-                            ..default()
-                        },
-                        transform: Transform {
-                            translation: player_displays_pos[1].extend(0.),
-                            ..default()
-                        },
-                        texture: display_sprite_handle.clone(),
-                        ..default()
-                    },
-                    RenderLayers::Single(EntityLayer::OfficeLevelAccent),
+                .spawn(make_display_sprite(
+                    player_displays_pos[PlayerIndex::Player2],
+                    player_displays_size[PlayerIndex::Player2],
+                    Anchor::BottomRight,
+                    &display_sprite_handle,
                 ))
                 .with_children(|builder| {
                     builder.spawn((
-                        Text2dBundle {
-                            text: Text::from_sections([
-                                TextSection::new(
-                                    "Score: ",
-                                    TextStyle {
-                                        font_size: 20.0,
-                                        color: player_colours[1],
-                                        ..default()
-                                    },
-                                ),
-                                TextSection::new(
-                                    "0",
-                                    TextStyle {
-                                        font_size: 20.0,
-                                        color: player_colours[1],
-                                        ..default()
-                                    },
-                                ),
-                            ])
-                            .with_justify(JustifyText::Right),
-                            text_anchor: Anchor::BottomRight,
-                            text_2d_bounds: Text2dBounds {
-                                size: Vec2::new(
-                                    player_displays_size[1].x - (player_displays_border[1] * 2.),
-                                    player_displays_size[1].y,
-                                ),
-                                ..default()
-                            },
-                            transform: Transform {
-                                translation: Vec3::new(-player_displays_border[1], 0., 100.),
-                                ..default()
-                            },
-                            ..default()
-                        },
+                        make_score_text(
+                            "Score: ",
+                            player_configs[PlayerIndex::Player2].colour,
+                            player_displays_size[PlayerIndex::Player2]
+                                - Vec2::new(player_displays_border[PlayerIndex::Player2] * 2., 0.),
+                            -player_displays_border[PlayerIndex::Player2],
+                        ),
                         PlayerScoreTag::Player(PlayerIndex::Player2),
                     ));
                 });
@@ -706,4 +465,138 @@ fn setup(
         },
         RenderLayers::Single(EntityLayer::Debugging),
     ));
+}
+
+fn spawn_walls(
+    commands: &mut Commands,
+    app_config: &Res<AppConfig>,
+    game_config: &Res<GameConfig>,
+    incoming_belt_length: f32,
+) {
+    fn make_wall(
+        pos: Vec2,
+        size: Vec2,
+        anchor: Anchor,
+    ) -> (SpriteBundle, Collider, WallTag, RenderLayers) {
+        (
+            SpriteBundle {
+                sprite: Sprite {
+                    anchor: anchor,
+                    ..default()
+                },
+                transform: Transform::from_translation(pos.extend(0.)),
+                ..default()
+            },
+            Collider { size: size },
+            WallTag,
+            RenderLayers::Single(EntityLayer::HeldObject),
+        )
+    }
+
+    commands.spawn(make_wall(
+        Vec2::new(app_config.base_resolution.x as f32 / 2., 0.),
+        Vec2::new(10., app_config.base_resolution.y as f32),
+        Anchor::CenterLeft,
+    ));
+    commands.spawn(make_wall(
+        Vec2::new(-(app_config.base_resolution.x as f32) / 2., 0.),
+        Vec2::new(10., app_config.base_resolution.y as f32),
+        Anchor::CenterRight,
+    ));
+    commands.spawn(make_wall(
+        Vec2::new(
+            -game_config.conveyor_config.size.x + 10.,
+            (incoming_belt_length / 2.)
+                + (game_config.supervisor_config.office_sprite_size.y as f32 / 2.),
+        ),
+        Vec2::new(
+            10.,
+            game_config.supervisor_config.office_sprite_size.y as f32,
+        ),
+        Anchor::CenterLeft,
+    ));
+    commands.spawn(make_wall(
+        Vec2::new(
+            game_config.conveyor_config.size.x - 10.,
+            (incoming_belt_length / 2.)
+                + (game_config.supervisor_config.office_sprite_size.y as f32 / 2.),
+        ),
+        Vec2::new(
+            10.,
+            game_config.supervisor_config.office_sprite_size.y as f32,
+        ),
+        Anchor::CenterRight,
+    ));
+    commands.spawn(make_wall(
+        Vec2::new(
+            0.,
+            (app_config.base_resolution.y as f32 / 2.)
+                - (game_config.supervisor_config.office_sprite_size.y as f32 / 2.),
+        ),
+        Vec2::new(app_config.base_resolution.x as f32, 10.),
+        Anchor::BottomCenter,
+    ));
+    commands.spawn(make_wall(
+        Vec2::new(0., -(app_config.base_resolution.y as f32) / 2.),
+        Vec2::new(app_config.base_resolution.x as f32, 10.),
+        Anchor::TopCenter,
+    ));
+}
+
+fn make_display_sprite(
+    pos: Vec2,
+    size: Vec2,
+    anchor: Anchor,
+    sprite_handle: &Handle<Image>,
+) -> (SpriteBundle, RenderLayers) {
+    (
+        SpriteBundle {
+            sprite: Sprite {
+                custom_size: Some(size),
+                anchor: anchor,
+                ..default()
+            },
+            transform: Transform {
+                translation: pos.extend(0.),
+                ..default()
+            },
+            texture: sprite_handle.clone(),
+            ..default()
+        },
+        RenderLayers::Single(EntityLayer::OfficeLevelAccent),
+    )
+}
+
+fn make_score_text(score_text: &str, colour: Color, bounds: Vec2, x_pos: f32) -> Text2dBundle {
+    Text2dBundle {
+        text: Text::from_sections([
+            TextSection::new(
+                score_text,
+                TextStyle {
+                    font_size: 20.0,
+                    color: colour.clone(),
+                    ..default()
+                },
+            ),
+            TextSection::new(
+                "0",
+                TextStyle {
+                    font_size: 20.0,
+                    color: colour,
+                    ..default()
+                },
+            ),
+        ])
+        .with_justify(JustifyText::Right),
+        text_anchor: Anchor::BottomRight,
+        text_2d_bounds: Text2dBounds {
+            size: bounds,
+            ..default()
+        },
+        transform: Transform {
+            translation: Vec3::new(x_pos, 0., 100.),
+            ..default()
+        },
+        ..default()
+    }
 }

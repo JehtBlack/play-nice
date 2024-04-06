@@ -8,7 +8,6 @@ use bevy::{
     input::{
         gamepad::{GamepadAxisType, GamepadButtonType},
         keyboard::KeyCode,
-        mouse::MouseButton,
     },
     math::{UVec2, Vec2},
     render::color::Color,
