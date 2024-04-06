@@ -6,15 +6,22 @@ use std::{
 use bevy::{
     ecs::system::Resource,
     math::{UVec2, Vec2},
+    render::color::Color,
 };
 use enum_map::{enum_map, Enum, EnumMap};
 use serde::{Deserialize, Serialize};
 
 use crate::random::*;
 
-#[derive(Enum, Deserialize, Serialize, PartialEq, Eq, Hash)]
+#[derive(Enum, Serialize, Deserialize, PartialEq, Eq, Clone, Copy)]
+pub enum PlayerIndex {
+    Player1,
+    Player2,
+}
+
+#[derive(Enum, Deserialize, Serialize)]
 pub enum TextureTarget {
-    Player,
+    AllPlayers,
     Supervisor,
     Package,
     Conveyor,
@@ -43,11 +50,18 @@ pub struct TexturePack {
 }
 
 #[derive(Deserialize, Serialize)]
+pub struct PerPlayerConfig {
+    pub colour: Color,
+    pub sprite_override: Option<TextureValue>,
+}
+
+#[derive(Deserialize, Serialize)]
 pub struct PlayerConfig {
     pub size: f32,
     pub move_speed: f32,
     pub sprint_move_modifier: f32,
     pub throw_power: f32,
+    pub per_player: EnumMap<PlayerIndex, PerPlayerConfig>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -90,6 +104,8 @@ pub struct GameConfig {
     pub selected_texture_pack: String,
     #[serde(default = "default_texture_pack")]
     pub texture_packs: HashMap<String, TexturePack>,
+    #[serde(default = "default_team_colour")]
+    pub team_colour: Color,
     #[serde(default)]
     pub player_config: PlayerConfig,
     #[serde(default)]
@@ -116,7 +132,7 @@ impl Default for TexturePack {
         Self {
             root: "sprites".to_string(),
             texture_map: enum_map! {
-                TextureTarget::Player => TextureValue::Choose(vec![
+                TextureTarget::AllPlayers => TextureValue::Choose(vec![
                     SpriteSheetConfig {
                         path: "player_skin_tone_a.png".to_string(),
                         grid_dimensions: Some(UVec2::new(4, 1)),
@@ -197,6 +213,20 @@ impl Default for PlayerConfig {
             move_speed: 150.,
             sprint_move_modifier: 2.,
             throw_power: 100.,
+            per_player: enum_map! {
+                PlayerIndex::Player1 => PerPlayerConfig {
+                    colour: Color::rgb_linear(1.0, 0.3, 0.3),
+                    sprite_override: Some(TextureValue::Only(SpriteSheetConfig {
+                        path: "sprites/custom_player.png".to_string(),
+                        grid_dimensions: Some(UVec2::new(4, 1)),
+                        cell_resolution: Some(UVec2::new(128, 128)),
+                    }))
+                },
+                PlayerIndex::Player2 => PerPlayerConfig {
+                    colour: Color::rgb_linear(0.3, 0.3, 1.6),
+                    sprite_override: None
+                },
+            },
         }
     }
 }
@@ -257,6 +287,7 @@ impl Default for GameConfig {
             texture_packs: maplit::hashmap! {
                 "default".to_string() => TexturePack::default(),
             },
+            team_colour: default_team_colour(),
             player_config: PlayerConfig::default(),
             supervisor_config: SupervisorConfig::default(),
             conveyor_config: ConveyorConfig::default(),
@@ -267,19 +298,25 @@ impl Default for GameConfig {
     }
 }
 
-impl TexturePack {
-    pub fn choose_texture_for(
-        &self,
-        target: TextureTarget,
-        rng: Option<&mut Rand>,
-    ) -> &SpriteSheetConfig {
-        match &self.texture_map[target] {
+impl TextureValue {
+    pub fn choose_texture(&self, rng: Option<&mut Rand>) -> &SpriteSheetConfig {
+        match self {
             TextureValue::Only(config) => config,
             TextureValue::Choose(configs) => {
                 let index = rng.map_or(0, |rng| rng.gen_range(0..configs.len()));
                 &configs[index]
             }
         }
+    }
+}
+
+impl TexturePack {
+    pub fn choose_texture_for(
+        &self,
+        target: TextureTarget,
+        rng: Option<&mut Rand>,
+    ) -> &SpriteSheetConfig {
+        self.texture_map[target].choose_texture(rng)
     }
 }
 
@@ -299,6 +336,10 @@ fn default_texture_pack() -> HashMap<String, TexturePack> {
     maplit::hashmap! {
         default_texture_pack_key() => TexturePack::default(),
     }
+}
+
+fn default_team_colour() -> Color {
+    Color::rgb_linear(0.6, 0.1, 0.6)
 }
 
 pub const CONFIG_FILENAME: &'static str = "play_nice.toml";

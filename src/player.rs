@@ -44,10 +44,18 @@ pub fn spawn_player(
     rng: &mut ResMut<Rand>,
     game_config: &Res<GameConfig>,
 ) {
-    let texture_pack = game_config.get_texture_pack();
-    let player_sprite = texture_pack.choose_texture_for(TextureTarget::Player, Some(rng));
-    let texture_handle: Handle<Image> =
-        asset_server.load(&format!("{}/{}", texture_pack.root, player_sprite.path));
+    let (player_sprite, sprite_path) = if let Some(texture) =
+        &game_config.player_config.per_player[player_index].sprite_override
+    {
+        let sprite = texture.choose_texture(Some(rng));
+        (sprite, sprite.path.clone())
+    } else {
+        let texture_pack = game_config.get_texture_pack();
+        let sprite = texture_pack.choose_texture_for(TextureTarget::AllPlayers, Some(rng));
+        (sprite, format!("{}/{}", texture_pack.root, sprite.path))
+    };
+
+    let texture_handle: Handle<Image> = asset_server.load(&sprite_path);
     let sprite_size = player_sprite
         .cell_resolution
         .expect("Player sprite must have a cell resolution")
@@ -112,7 +120,7 @@ pub fn spawn_player(
                             game_config.player_config.size * 1.2,
                             game_config.player_config.size * 1.2,
                         )),
-                        color: player_index.into(),
+                        color: game_config.player_config.per_player[player_index].colour,
                         ..default()
                     },
                     transform: Transform {

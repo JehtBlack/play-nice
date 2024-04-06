@@ -16,7 +16,6 @@ mod conveyor;
 mod game_mode;
 mod package;
 mod player;
-mod player_identification;
 mod random;
 mod render_layers;
 mod sprite_animation;
@@ -30,7 +29,6 @@ use conveyor::*;
 use game_mode::*;
 use package::*;
 use player::*;
-use player_identification::*;
 use random::*;
 use render_layers::*;
 use sprite_animation::*;
@@ -523,8 +521,11 @@ fn setup(
         ),
     ];
 
-    let player_colours = [PlayerIndex::Player1.into(), PlayerIndex::Player2.into()];
-    let team_colour = Color::rgb_linear(0.6, 0.1, 0.6);
+    let player_colours = [
+        game_config.player_config.per_player[PlayerIndex::Player1].colour,
+        game_config.player_config.per_player[PlayerIndex::Player2].colour,
+    ];
+    let team_colour = game_config.team_colour;
     let player_displays_border: [f32; 2] = [6., 6.];
     let supervisor_office_sprite =
         texture_pack.choose_texture_for(TextureTarget::SupervisorOffice, None);

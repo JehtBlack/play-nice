@@ -12,7 +12,7 @@ friction = 100.0
 [game.texture_packs.default]
 root = "sprites"
 
-[[game.texture_packs.default.texture_map.Player.Choose]]
+[[game.texture_packs.default.texture_map.AllPlayers.Choose]]
 path = "player_skin_tone_a.png"
 grid_dimensions = [
     4,
@@ -23,7 +23,7 @@ cell_resolution = [
     128,
 ]
 
-[[game.texture_packs.default.texture_map.Player.Choose]]
+[[game.texture_packs.default.texture_map.AllPlayers.Choose]]
 path = "player_skin_tone_b.png"
 grid_dimensions = [
     4,
@@ -34,7 +34,7 @@ cell_resolution = [
     128,
 ]
 
-[[game.texture_packs.default.texture_map.Player.Choose]]
+[[game.texture_packs.default.texture_map.AllPlayers.Choose]]
 path = "player_skin_tone_c.png"
 grid_dimensions = [
     4,
@@ -45,7 +45,7 @@ cell_resolution = [
     128,
 ]
 
-[[game.texture_packs.default.texture_map.Player.Choose]]
+[[game.texture_packs.default.texture_map.AllPlayers.Choose]]
 path = "player_skin_tone_d.png"
 grid_dimensions = [
     4,
@@ -123,11 +123,40 @@ path = "supervisor_office.png"
 [game.texture_packs.default.texture_map.ScoreDisplay.Only]
 path = "display.png"
 
+[game.team_colour.RgbaLinear]
+red = 0.6000000238418579
+green = 0.10000000149011612
+blue = 0.6000000238418579
+alpha = 1.0
+
 [game.player_config]
 size = 30.0
 move_speed = 150.0
 sprint_move_modifier = 2.0
 throw_power = 100.0
+
+[game.player_config.per_player.Player1.colour.RgbaLinear]
+red = 1.0
+green = 0.30000001192092896
+blue = 0.30000001192092896
+alpha = 1.0
+
+[game.player_config.per_player.Player1.sprite_override.Only]
+path = "sprites/custom_player.png"
+grid_dimensions = [
+    4,
+    1,
+]
+cell_resolution = [
+    128,
+    128,
+]
+
+[game.player_config.per_player.Player2.colour.RgbaLinear]
+red = 0.30000001192092896
+green = 0.30000001192092896
+blue = 1.600000023841858
+alpha = 1.0
 
 [game.supervisor_config]
 size = 30.0
