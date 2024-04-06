@@ -11,16 +11,6 @@ pub struct ButtonState {
     pub state_changed_this_frame: bool,
 }
 
-#[derive(Clone, Copy)]
-pub struct ControlState {
-    pub move_up: ButtonState,
-    pub move_down: ButtonState,
-    pub move_left: ButtonState,
-    pub move_right: ButtonState,
-    pub sprint: ButtonState,
-    pub pickup_or_throw: ButtonState,
-}
-
 pub struct PlayerControls {
     pub pad: Option<Gamepad>,
     pub state: EnumMap<KeyAction, ButtonState>,
