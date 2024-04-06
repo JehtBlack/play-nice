@@ -79,8 +79,8 @@ fn main() -> anyhow::Result<()> {
                 },
             },
             package_wave_timer: Timer::from_seconds(5., TimerMode::Once),
-            player_controls: [
-                PlayerControls {
+            player_controls: enum_map! {
+                PlayerIndex::Player1 => PlayerControls {
                     pad: None,
                     mapping: ControlMapping {
                         move_up: ButtonMapping {
@@ -141,7 +141,7 @@ fn main() -> anyhow::Result<()> {
                         },
                     },
                 },
-                PlayerControls {
+                PlayerIndex::Player2 => PlayerControls {
                     pad: None,
                     mapping: ControlMapping {
                         move_up: ButtonMapping {
@@ -202,7 +202,7 @@ fn main() -> anyhow::Result<()> {
                         },
                     },
                 },
-            ],
+            },
         })
         .add_event::<CollisionEvent>()
         .add_systems(Startup, setup)

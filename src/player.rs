@@ -133,8 +133,7 @@ pub fn move_player(
     time: Res<Time>,
 ) {
     for (mut player_transform, mut player_anim_data, player_data) in &mut query {
-        let player_control_state =
-            &game_state.player_controls[player_data.player_index.index()].state;
+        let player_control_state = &game_state.player_controls[player_data.player_index].state;
         let sprinting = player_control_state.sprint.pressed();
         // bias to facing horizontally TODO: remove this bias
         let mut new_facing_direction: Option<FacingDirection> = None;
@@ -192,11 +191,10 @@ pub fn pickup_package(
             .iter_mut()
             .find(|(p, _, _)| p == &event.entity_a || p == &event.entity_b)
         {
-            let player_wants_to_pickup = game_state.player_controls
-                [player_info.player_index.index()]
-            .state
-            .pickup_or_throw
-            .just_pressed();
+            let player_wants_to_pickup = game_state.player_controls[player_info.player_index]
+                .state
+                .pickup_or_throw
+                .just_pressed();
             if !player_wants_to_pickup {
                 continue;
             }
@@ -314,8 +312,7 @@ pub fn throw_package(
             .iter()
             .find(|(p, _, _, _)| p == &package_parent.get())
         {
-            let player_control_state =
-                &game_state.player_controls[player_info.player_index.index()].state;
+            let player_control_state = &game_state.player_controls[player_info.player_index].state;
             let player_wants_to_throw = player_control_state.pickup_or_throw.just_released();
 
             if !player_wants_to_throw {
@@ -369,7 +366,7 @@ pub fn player_charge_throw(
     for (mut player_info, player_children) in &mut player_query {
         player_info.pickup_cooldown_timer.tick(time.delta());
         if player_children.len() > 0
-            && game_state.player_controls[player_info.player_index.index()]
+            && game_state.player_controls[player_info.player_index]
                 .state
                 .pickup_or_throw
                 .pressed()

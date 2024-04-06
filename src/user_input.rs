@@ -68,20 +68,20 @@ pub fn gamepad_connected(
         match event {
             GamepadEvent::Connection(connection_event) => match connection_event.connection {
                 GamepadConnection::Connected(_) => {
-                    if let Some(player_control) = game_state
+                    if let Some((_, player_control)) = game_state
                         .player_controls
                         .iter_mut()
-                        .find(|player_control| player_control.pad.is_none())
+                        .find(|(_, player_control)| player_control.pad.is_none())
                     {
                         player_control.pad = Some(connection_event.gamepad);
                     }
                 }
                 GamepadConnection::Disconnected => {
-                    if let Some(player_control) =
+                    if let Some((_, player_control)) =
                         game_state
                             .player_controls
                             .iter_mut()
-                            .find(|player_control| {
+                            .find(|(_, player_control)| {
                                 player_control
                                     .pad
                                     .map_or(false, |p| p.id == connection_event.gamepad.id)
@@ -104,7 +104,7 @@ pub fn update_controller_mappings(
 ) {
     const GAMEPAD_AXIS_THRESHOLD: f32 = 0.5;
 
-    for player_control in game_state.player_controls.iter_mut() {
+    for (_, player_control) in game_state.player_controls.iter_mut() {
         let prev_control_state = player_control.state.clone();
         let mut new_control_state = ControlState {
             move_up: ButtonState {

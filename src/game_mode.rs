@@ -13,7 +13,7 @@ pub struct PlayerScoreData {
 pub struct GameState {
     pub player_scores: EnumMap<PlayerIndex, PlayerScoreData>,
     pub package_wave_timer: Timer,
-    pub player_controls: [PlayerControls; 2],
+    pub player_controls: EnumMap<PlayerIndex, PlayerControls>,
 }
 
 #[derive(Component)]
