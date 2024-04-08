@@ -20,10 +20,18 @@
                 }
             },
             "args": [],
-            "env": {
-                "BEVY_ASSET_ROOT": "${workspaceFolder}/",
-                "RUST_LOG": "info,play_nice=trace",
-                "LD_LIBRARY_PATH": "${workspaceFolder}/target/debug/deps:${userHome}/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib",
+            "windows": {
+                "env": {
+                    "BEVY_ASSET_ROOT": "${workspaceFolder}/",
+                    "RUST_LOG": "info,play_nice=trace",
+                },
+            },
+            "linux": {
+                "env": {
+                    "BEVY_ASSET_ROOT": "${workspaceFolder}/",
+                    "RUST_LOG": "info,play_nice=trace",
+                    "LD_LIBRARY_PATH": "${workspaceFolder}/target/debug/deps:${userHome}/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib",
+                },
             },
             "cwd": "${workspaceFolder}"
         },
