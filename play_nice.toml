@@ -1,8 +1,5 @@
 [app]
-base_resolution = [
-    1280,
-    720,
-]
+base_resolution = [1280, 720]
 rng_seed = 1000
 
 [game]
@@ -14,105 +11,51 @@ root = "sprites"
 
 [[game.texture_packs.default.texture_map.AllPlayers.Choose]]
 path = "player_skin_tone_a.png"
-grid_dimensions = [
-    4,
-    1,
-]
-cell_resolution = [
-    128,
-    128,
-]
+grid_dimensions = [4, 1]
+cell_resolution = [128, 128]
 
 [[game.texture_packs.default.texture_map.AllPlayers.Choose]]
 path = "player_skin_tone_b.png"
-grid_dimensions = [
-    4,
-    1,
-]
-cell_resolution = [
-    128,
-    128,
-]
+grid_dimensions = [4, 1]
+cell_resolution = [128, 128]
 
 [[game.texture_packs.default.texture_map.AllPlayers.Choose]]
 path = "player_skin_tone_c.png"
-grid_dimensions = [
-    4,
-    1,
-]
-cell_resolution = [
-    128,
-    128,
-]
+grid_dimensions = [4, 1]
+cell_resolution = [128, 128]
 
 [[game.texture_packs.default.texture_map.AllPlayers.Choose]]
 path = "player_skin_tone_d.png"
-grid_dimensions = [
-    4,
-    1,
-]
-cell_resolution = [
-    128,
-    128,
-]
+grid_dimensions = [4, 1]
+cell_resolution = [128, 128]
 
 [[game.texture_packs.default.texture_map.Supervisor.Choose]]
 path = "supervisor_skin_tone_a.png"
-grid_dimensions = [
-    2,
-    1,
-]
-cell_resolution = [
-    128,
-    128,
-]
+grid_dimensions = [2, 1]
+cell_resolution = [128, 128]
 
 [[game.texture_packs.default.texture_map.Supervisor.Choose]]
 path = "supervisor_skin_tone_b.png"
-grid_dimensions = [
-    2,
-    1,
-]
-cell_resolution = [
-    128,
-    128,
-]
+grid_dimensions = [2, 1]
+cell_resolution = [128, 128]
 
 [[game.texture_packs.default.texture_map.Supervisor.Choose]]
 path = "supervisor_skin_tone_c.png"
-grid_dimensions = [
-    2,
-    1,
-]
-cell_resolution = [
-    128,
-    128,
-]
+grid_dimensions = [2, 1]
+cell_resolution = [128, 128]
 
 [[game.texture_packs.default.texture_map.Supervisor.Choose]]
 path = "supervisor_skin_tone_d.png"
-grid_dimensions = [
-    2,
-    1,
-]
-cell_resolution = [
-    128,
-    128,
-]
+grid_dimensions = [2, 1]
+cell_resolution = [128, 128]
 
 [game.texture_packs.default.texture_map.Package.Only]
 path = "box.png"
 
 [game.texture_packs.default.texture_map.Conveyor.Only]
 path = "conveyor.png"
-grid_dimensions = [
-    5,
-    1,
-]
-cell_resolution = [
-    128,
-    128,
-]
+grid_dimensions = [5, 1]
+cell_resolution = [128, 128]
 
 [game.texture_packs.default.texture_map.Background.Only]
 path = "background.png"
@@ -133,7 +76,7 @@ alpha = 1.0
 size = 30.0
 move_speed = 150.0
 sprint_move_modifier = 2.0
-throw_power = 100.0
+throw_power = 15.0
 
 [game.player_config.per_player.Player1.colour.RgbaLinear]
 red = 1.0
@@ -143,68 +86,44 @@ alpha = 1.0
 
 [game.player_config.per_player.Player1.sprite_override.Only]
 path = "sprites/custom_player.png"
-grid_dimensions = [
-    4,
-    1,
-]
-cell_resolution = [
-    128,
-    128,
-]
+grid_dimensions = [4, 1]
+cell_resolution = [128, 128]
 
 [game.player_config.per_player.Player1.key_map.MoveUp.priamry]
 Key = "KeyW"
 
 [game.player_config.per_player.Player1.key_map.MoveUp.secondary]
-ControllerAxis = [
-    "LeftStickY",
-    "Positive",
-]
+ControllerAxis = ["LeftStickY", "Positive"]
 
 [game.player_config.per_player.Player1.key_map.MoveDown.priamry]
 Key = "KeyS"
 
 [game.player_config.per_player.Player1.key_map.MoveDown.secondary]
-ControllerAxis = [
-    "LeftStickY",
-    "Negative",
-]
+ControllerAxis = ["LeftStickY", "Negative"]
 
 [game.player_config.per_player.Player1.key_map.MoveLeft.priamry]
 Key = "KeyA"
 
 [game.player_config.per_player.Player1.key_map.MoveLeft.secondary]
-ControllerAxis = [
-    "LeftStickX",
-    "Negative",
-]
+ControllerAxis = ["LeftStickX", "Negative"]
 
 [game.player_config.per_player.Player1.key_map.MoveRight.priamry]
 Key = "KeyD"
 
 [game.player_config.per_player.Player1.key_map.MoveRight.secondary]
-ControllerAxis = [
-    "LeftStickX",
-    "Positive",
-]
+ControllerAxis = ["LeftStickX", "Positive"]
 
 [game.player_config.per_player.Player1.key_map.Sprint.priamry]
 Key = "ShiftLeft"
 
 [game.player_config.per_player.Player1.key_map.Sprint.secondary]
-ControllerAxis = [
-    "LeftZ",
-    "Positive",
-]
+ControllerAxis = ["LeftZ", "Positive"]
 
 [game.player_config.per_player.Player1.key_map.PickupOrThrow.priamry]
 Key = "Space"
 
 [game.player_config.per_player.Player1.key_map.PickupOrThrow.secondary]
-ControllerAxis = [
-    "RightZ",
-    "Positive",
-]
+ControllerAxis = ["RightZ", "Positive"]
 
 [game.player_config.per_player.Player2.colour.RgbaLinear]
 red = 0.30000001192092896
@@ -216,69 +135,45 @@ alpha = 1.0
 Key = "ArrowUp"
 
 [game.player_config.per_player.Player2.key_map.MoveUp.secondary]
-ControllerAxis = [
-    "LeftStickY",
-    "Positive",
-]
+ControllerAxis = ["LeftStickY", "Positive"]
 
 [game.player_config.per_player.Player2.key_map.MoveDown.priamry]
 Key = "ArrowDown"
 
 [game.player_config.per_player.Player2.key_map.MoveDown.secondary]
-ControllerAxis = [
-    "LeftStickY",
-    "Negative",
-]
+ControllerAxis = ["LeftStickY", "Negative"]
 
 [game.player_config.per_player.Player2.key_map.MoveLeft.priamry]
 Key = "ArrowLeft"
 
 [game.player_config.per_player.Player2.key_map.MoveLeft.secondary]
-ControllerAxis = [
-    "LeftStickX",
-    "Negative",
-]
+ControllerAxis = ["LeftStickX", "Negative"]
 
 [game.player_config.per_player.Player2.key_map.MoveRight.priamry]
 Key = "ArrowRight"
 
 [game.player_config.per_player.Player2.key_map.MoveRight.secondary]
-ControllerAxis = [
-    "LeftStickX",
-    "Positive",
-]
+ControllerAxis = ["LeftStickX", "Positive"]
 
 [game.player_config.per_player.Player2.key_map.Sprint.priamry]
 Key = "ShiftRight"
 
 [game.player_config.per_player.Player2.key_map.Sprint.secondary]
-ControllerAxis = [
-    "LeftZ",
-    "Positive",
-]
+ControllerAxis = ["LeftZ", "Positive"]
 
 [game.player_config.per_player.Player2.key_map.PickupOrThrow.priamry]
 Key = "ControlRight"
 
 [game.player_config.per_player.Player2.key_map.PickupOrThrow.secondary]
-ControllerAxis = [
-    "RightZ",
-    "Positive",
-]
+ControllerAxis = ["RightZ", "Positive"]
 
 [game.supervisor_config]
 size = 30.0
 monitoring_y_pos = 285.0
-office_sprite_size = [
-    400,
-    150,
-]
+office_sprite_size = [400, 150]
 
 [game.conveyor_config]
-size = [
-    128.0,
-    500.0,
-]
+size = [128.0, 500.0]
 speed = 100.0
 border_size = 14.0
 blinker_size = 20.0

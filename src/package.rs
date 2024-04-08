@@ -18,8 +18,13 @@ pub struct PackageBundle {
 #[derive(Bundle)]
 pub struct PackagePhysicsBundle {
     pub rigid_body: RigidBody,
+    pub mass_props: ColliderMassProperties,
+    pub damping: Damping,
     pub collider: Collider,
     pub locked_axes: LockedAxes,
+    pub friction: Friction,
+    pub restitution: Restitution,
+    pub impulse: ExternalImpulse,
 }
 
 impl Default for PackageBundle {
@@ -36,8 +41,22 @@ impl Default for PackagePhysicsBundle {
     fn default() -> Self {
         Self {
             rigid_body: RigidBody::Dynamic,
+            mass_props: ColliderMassProperties::Density(500.),
+            damping: Damping {
+                linear_damping: 1.,
+                ..default()
+            },
             collider: Collider::default(),
             locked_axes: LockedAxes::ROTATION_LOCKED,
+            friction: Friction {
+                coefficient: 1.,
+                ..default()
+            },
+            restitution: Restitution {
+                coefficient: 0.1,
+                ..default()
+            },
+            impulse: ExternalImpulse::default(),
         }
     }
 }
@@ -78,6 +97,7 @@ pub fn spawn_package(
                 game_config.package_config.size / 2.,
             ),
             locked_axes: LockedAxes::ROTATION_LOCKED,
+            ..default()
         },
     ));
 }
@@ -158,6 +178,7 @@ pub fn activate_package_physics(
     commands: &mut Commands,
     package_entity: Entity,
     game_config: &Res<GameConfig>,
+    impulse_to_apply: Vec2,
 ) {
     commands
         .entity(package_entity)
@@ -168,6 +189,11 @@ pub fn activate_package_physics(
                 game_config.package_config.size / 2.,
             ),
             locked_axes: LockedAxes::ROTATION_LOCKED,
+            impulse: ExternalImpulse {
+                impulse: impulse_to_apply,
+                ..default()
+            },
+            ..default()
         });
 }
 

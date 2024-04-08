@@ -2,15 +2,15 @@ use bevy::prelude::*;
 use bevy_rapier2d::{
     control::{KinematicCharacterController, KinematicCharacterControllerOutput},
     dynamics::RigidBody,
-    geometry::{Collider, Sensor},
+    geometry::Collider,
     pipeline::QueryFilter,
     plugin::RapierContext,
 };
 
 use crate::{
-    activate_package_physics, deactivate_package_physics, package, random::*, AnimationData,
-    Conveyor, ConveyorLabelTag, EntityLayer, FacingDirection, GameConfig, GameState, KeyAction,
-    Package, PlayerIndex, RenderLayers, TextureTarget,
+    activate_package_physics, deactivate_package_physics, random::*, AnimationData, Conveyor,
+    ConveyorLabelTag, EntityLayer, FacingDirection, GameConfig, GameState, KeyAction, Package,
+    PlayerIndex, RenderLayers, TextureTarget,
 };
 
 pub enum PlayAreaAligment {
@@ -312,10 +312,8 @@ pub fn pickup_package(
                 |colliding_entity| {
                     if package_query.get(colliding_entity).is_ok() {
                         nearby_packages.push(colliding_entity);
-                        println!("Package nearby that we could pick up");
                     } else if conveyor_query.get(colliding_entity).is_ok() {
                         nearby_conveyors.push(colliding_entity);
-                        println!("Conveyor nearby that we could pick up from");
                     }
                     true
                 },
@@ -407,10 +405,7 @@ pub fn pickup_package(
             continue;
         };
 
-        let currently_held = package_parent.map_or(false, |_p| true);
-        let package_on_conveyor = conveyor_holding_package.is_some();
-
-        if !currently_held
+        if !package_parent.map_or(false, |_p| true)
             || conveyor_holding_package.map_or(false, |(_, mut conveyor_info, conveyor_label)| {
                 if conveyor_label == &ConveyorLabelTag::Incoming {
                     conveyor_info.package_count -= 1;
@@ -420,17 +415,11 @@ pub fn pickup_package(
                 }
             })
         {
-            if package_on_conveyor {
-                println!("picking up package from conveyor");
-            } else {
-                println!("picking up package from ground");
-            }
             // pick up the package
             package_transform.translation = Vec3::new(0., game_config.player_config.size / 2., 0.);
             match package_layers.as_mut() {
                 RenderLayers::Multi(layers) => {
                     layers.insert(EntityLayer::HeldObject);
-                    ()
                 }
                 _ => {}
             }
@@ -454,14 +443,11 @@ pub fn throw_package(
     game_state: Res<GameState>,
     game_config: Res<GameConfig>,
 ) {
-    for (package_entity, mut package_transform, mut package_layers, package_parent) in
-        &mut package_query
+    for (package_entity, mut package_transform, mut package_layers, package_parent) in package_query
+        .iter_mut()
+        .filter(|(_, _, _, package_parent)| package_parent.is_some())
     {
-        let package_parent = if package_parent.is_none() {
-            continue;
-        } else {
-            package_parent.unwrap()
-        };
+        let package_parent = package_parent.unwrap();
 
         if let Some((_, player_info, player_anim_data, player_transform)) = player_query
             .iter()
@@ -471,16 +457,11 @@ pub fn throw_package(
             let player_wants_to_throw =
                 player_control_state[KeyAction::PickupOrThrow].just_released();
 
-            if !player_wants_to_throw {
-                continue;
-            }
-
-            if !player_info.pickup_cooldown_timer.finished() {
+            if !player_wants_to_throw || !player_info.pickup_cooldown_timer.finished() {
                 continue;
             }
 
             // drop the package
-            let current_relative_position = package_transform.translation;
             commands.entity(package_entity).remove_parent();
             match package_layers.as_mut() {
                 RenderLayers::Multi(layers) => {
@@ -491,10 +472,8 @@ pub fn throw_package(
             }
 
             // calculate throw distance
-            package_transform.translation =
-                player_transform.translation + current_relative_position;
-            let throw_distance =
-                player_info.throw_timer.fraction() * game_config.player_config.throw_power;
+            let throw_distance = player_info.throw_timer.fraction()
+                * (1000. * game_config.player_config.throw_power);
 
             let mut direction = player_anim_data.facing_direction.as_vector();
             if player_control_state[KeyAction::MoveUp].pressed() {
@@ -509,7 +488,14 @@ pub fn throw_package(
                 direction.x = 1.;
             }
 
-            activate_package_physics(&mut commands, package_entity, &game_config);
+            package_transform.translation = player_transform.translation
+                + (direction * (game_config.player_config.size / 2.)).extend(0.);
+            activate_package_physics(
+                &mut commands,
+                package_entity,
+                &game_config,
+                direction * throw_distance,
+            );
         }
     }
 }

@@ -21,10 +21,6 @@ impl ButtonState {
         self.pressed
     }
 
-    pub fn released(&self) -> bool {
-        !self.pressed
-    }
-
     pub fn just_pressed(&self) -> bool {
         self.pressed && self.state_changed_this_frame
     }

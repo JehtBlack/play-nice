@@ -1,9 +1,10 @@
 use bevy::prelude::*;
-use bevy_rapier2d::{dynamics::RigidBody, geometry::Collider};
+use bevy_rapier2d::{dynamics::RigidBody, geometry::Collider, plugin::RapierContext};
 
 use crate::{
-    AnimationData, AnimationTimer, EntityLayer, FacingDirection, GameConfig, GameState, Package,
-    PlayAreaAligment, Player, PlayerIndex, RenderLayers, SimpleCollisionEvent, TextureTarget,
+    deactivate_package_physics, AnimationData, AnimationTimer, EntityLayer, FacingDirection,
+    GameConfig, GameState, Package, PlayAreaAligment, Player, PlayerIndex, RenderLayers,
+    TextureTarget,
 };
 
 #[derive(Component, PartialEq, Eq)]
@@ -221,33 +222,36 @@ pub fn check_for_delivered_packages(
 
 pub fn collect_packages_on_outgoing_conveyors(
     mut commands: Commands,
-    mut collision_events: EventReader<SimpleCollisionEvent>,
-    mut package_query: Query<
-        (Entity, &mut Transform, Option<&Parent>),
-        (With<Package>, Without<Player>),
-    >,
-    mut conveyor_query: Query<(Entity, &mut Conveyor)>,
+    mut package_query: Query<(Entity, &mut Transform), (With<Package>, Without<Player>)>,
+    mut conveyor_query: Query<(Entity, &mut Conveyor, &ConveyorLabelTag)>,
     game_config: Res<GameConfig>,
+    rapier_context: Res<RapierContext>,
 ) {
-    for event in collision_events.read() {
-        if let Some((package_entity, mut package_transform, package_parent)) = package_query
+    for contact_pair in rapier_context
+        .contact_pairs()
+        .filter(|pair| pair.has_any_active_contacts())
+    {
+        if let Some((package_entity, mut package_transform)) = package_query
             .iter_mut()
-            .find(|(p, _, _)| p == &event.entity_a || p == &event.entity_b)
+            .find(|(p, _)| p == &contact_pair.collider1() || p == &contact_pair.collider2())
         {
-            if let Some((conveyor_entity, mut conveyor_info)) = conveyor_query
-                .iter_mut()
-                .find(|(c, _)| c == &event.entity_a || c == &event.entity_b)
+            if let Some((conveyor_entity, mut conveyor_info, _)) =
+                conveyor_query.iter_mut().find(|(c, _, label)| match label {
+                    ConveyorLabelTag::Outgoing(_) => {
+                        c == &contact_pair.collider1() || c == &contact_pair.collider2()
+                    }
+                    _ => false,
+                })
             {
-                if package_parent.is_none() {
-                    package_transform.translation = calculate_attach_point_on_conveyor(
-                        &conveyor_info,
-                        Vec2::ZERO,
-                        game_config.package_config.size,
-                    )
-                    .extend(0.);
-                    commands.entity(conveyor_entity).add_child(package_entity);
-                    conveyor_info.package_count += 1;
-                }
+                package_transform.translation = calculate_attach_point_on_conveyor(
+                    &conveyor_info,
+                    Vec2::ZERO,
+                    game_config.package_config.size,
+                )
+                .extend(0.);
+                deactivate_package_physics(&mut commands, package_entity);
+                commands.entity(conveyor_entity).add_child(package_entity);
+                conveyor_info.package_count += 1;
             }
         }
     }

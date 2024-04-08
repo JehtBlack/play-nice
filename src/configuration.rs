@@ -246,7 +246,7 @@ impl Default for PlayerConfig {
             size: 30.,
             move_speed: 150.,
             sprint_move_modifier: 2.,
-            throw_power: 100.,
+            throw_power: 15.,
             per_player: enum_map! {
                 PlayerIndex::Player1 => PerPlayerConfig {
                     colour: Color::rgb_linear(1.0, 0.3, 0.3),

@@ -9,31 +9,10 @@ use bevy_rapier2d::prelude::*;
 use enum_map::enum_map;
 use std::path::PathBuf;
 
-mod collision;
-mod configuration;
-mod conveyor;
-mod game_mode;
-mod package;
-mod player;
-mod random;
-mod render_layers;
-mod sprite_animation;
-mod sprite_render_layers;
-mod supervisor;
-mod user_input;
+use play_nice::*;
 
-use collision::*;
-use configuration::*;
-use conveyor::*;
-use game_mode::*;
-use package::*;
-use player::*;
-use random::*;
-use render_layers::*;
-use sprite_animation::*;
-use sprite_render_layers::*;
-use supervisor::*;
-use user_input::*;
+#[derive(Component)]
+pub struct WallTag;
 
 fn main() -> anyhow::Result<()> {
     dotenv::dotenv().ok();
@@ -59,7 +38,9 @@ fn main() -> anyhow::Result<()> {
             }),
         )
         .add_plugins(SpriteLayerPlugin::<RenderLayers>::default())
-        .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(1.))
+        .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(
+            config.game.package_config.size * 2.,
+        ))
         .add_plugins(RapierDebugRenderPlugin {
             mode: DebugRenderMode::all(),
             ..default()
@@ -142,7 +123,6 @@ fn main() -> anyhow::Result<()> {
                 },
             },
         })
-        .add_event::<SimpleCollisionEvent>()
         .add_systems(
             Startup,
             (setup_camera, setup_world, setup_supervisor, setup_players),
@@ -157,16 +137,16 @@ fn main() -> anyhow::Result<()> {
                 update_conveyors,
                 player_charge_throw,
                 throw_package,
-                check_for_collisions,
-                collect_packages_on_outgoing_conveyors,
                 check_for_delivered_packages,
                 update_supervisor,
                 check_supervisor_can_see_players,
-                react_to_basic_collisions,
             )
                 .chain(),
         )
-        .add_systems(PostUpdate, pickup_package)
+        .add_systems(
+            PostUpdate,
+            (pickup_package, collect_packages_on_outgoing_conveyors),
+        )
         .add_systems(
             Update,
             (
@@ -177,7 +157,6 @@ fn main() -> anyhow::Result<()> {
                 bevy::window::close_on_esc,
             ),
         )
-        .add_systems(Last, clear_frame_collisions)
         .run();
 
     Ok(())
@@ -486,7 +465,7 @@ fn setup_supervisor(
                             player_configs[PlayerIndex::Player1].colour,
                             player_displays_size[PlayerIndex::Player1]
                                 - Vec2::new(player_displays_border[PlayerIndex::Player1] * 2., 0.),
-                            player_displays_size[PlayerIndex::Player1].x / 2.
+                            player_displays_size[PlayerIndex::Player1].x
                                 - player_displays_border[PlayerIndex::Player1],
                         ),
                         PlayerScoreTag::Player(PlayerIndex::Player1),
