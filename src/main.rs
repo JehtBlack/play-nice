@@ -6,7 +6,7 @@ use bevy::{
     window::WindowResolution,
 };
 use bevy_rapier2d::prelude::*;
-use enum_map::enum_map;
+use enum_map::{enum_map, EnumMap};
 use std::path::PathBuf;
 
 use play_nice::*;
@@ -49,79 +49,9 @@ fn main() -> anyhow::Result<()> {
         .insert_resource(config.game)
         .insert_resource(rng)
         .insert_resource(GameState {
-            player_scores: enum_map! {
-                PlayerIndex::Player1 => PlayerScoreData {
-                    score: 0.,
-                    multiplier: 1.,
-                    multiplier_decrement_freeze_timer: Timer::from_seconds(2., TimerMode::Once),
-                },
-                PlayerIndex::Player2 => PlayerScoreData {
-                    score: 0.,
-                    multiplier: 1.,
-                    multiplier_decrement_freeze_timer: Timer::from_seconds(2., TimerMode::Once),
-                },
-            },
+            player_scores: default(),
             package_wave_timer: Timer::from_seconds(5., TimerMode::Once),
-            player_controls: enum_map! {
-                PlayerIndex::Player1 => PlayerControls {
-                    pad: None,
-                    state: enum_map! {
-                        KeyAction::MoveUp => ButtonState {
-                            pressed: false,
-                            state_changed_this_frame: false,
-                        },
-                        KeyAction::MoveDown => ButtonState {
-                            pressed: false,
-                            state_changed_this_frame: false,
-                        },
-                        KeyAction::MoveLeft => ButtonState {
-                            pressed: false,
-                            state_changed_this_frame: false,
-                        },
-                        KeyAction::MoveRight => ButtonState {
-                            pressed: false,
-                            state_changed_this_frame: false,
-                        },
-                        KeyAction::Sprint => ButtonState {
-                            pressed: false,
-                            state_changed_this_frame: false,
-                        },
-                        KeyAction::PickupOrThrow => ButtonState {
-                            pressed: false,
-                            state_changed_this_frame: false,
-                        },
-                    },
-                },
-                PlayerIndex::Player2 => PlayerControls {
-                    pad: None,
-                    state: enum_map! {
-                        KeyAction::MoveUp => ButtonState {
-                            pressed: false,
-                            state_changed_this_frame: false,
-                        },
-                        KeyAction::MoveDown => ButtonState {
-                            pressed: false,
-                            state_changed_this_frame: false,
-                        },
-                        KeyAction::MoveLeft => ButtonState {
-                            pressed: false,
-                            state_changed_this_frame: false,
-                        },
-                        KeyAction::MoveRight => ButtonState {
-                            pressed: false,
-                            state_changed_this_frame: false,
-                        },
-                        KeyAction::Sprint => ButtonState {
-                            pressed: false,
-                            state_changed_this_frame: false,
-                        },
-                        KeyAction::PickupOrThrow => ButtonState {
-                            pressed: false,
-                            state_changed_this_frame: false,
-                        },
-                    },
-                },
-            },
+            player_controls: default(),
         })
         .add_systems(
             Startup,

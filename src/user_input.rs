@@ -5,12 +5,13 @@ use bevy::{
 };
 use enum_map::{enum_map, EnumMap};
 
-#[derive(Clone, Copy)]
+#[derive(Default, Clone, Copy)]
 pub struct ButtonState {
     pub pressed: bool,
     pub state_changed_this_frame: bool,
 }
 
+#[derive(Default)]
 pub struct PlayerControls {
     pub pad: Option<Gamepad>,
     pub state: EnumMap<KeyAction, ButtonState>,

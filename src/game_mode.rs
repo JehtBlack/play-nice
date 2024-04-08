@@ -22,6 +22,16 @@ pub enum PlayerScoreTag {
     Player(PlayerIndex),
 }
 
+impl Default for PlayerScoreData {
+    fn default() -> Self {
+        Self {
+            score: 0.,
+            multiplier: 1.,
+            multiplier_decrement_freeze_timer: Timer::from_seconds(2., TimerMode::Once),
+        }
+    }
+}
+
 pub fn update_score_multipiers(
     mut game_state: ResMut<GameState>,
     time: Res<Time>,
