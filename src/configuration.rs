@@ -46,7 +46,7 @@ pub enum KeyAction {
     PickupOrThrow,
 }
 
-#[derive(Enum, Serialize, Deserialize, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, Enum, Serialize, Deserialize, PartialEq, Eq, Clone, Copy)]
 pub enum PlayerIndex {
     Player1,
     Player2,

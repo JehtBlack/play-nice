@@ -1,9 +1,9 @@
 use bevy::prelude::*;
+use bevy_rapier2d::{dynamics::RigidBody, geometry::Collider};
 
 use crate::{
-    AnimationData, AnimationTimer, Collider, CollisionEvent, EntityLayer, FacingDirection,
-    GameConfig, GameState, Package, PlayAreaAligment, Player, PlayerIndex, RenderLayers,
-    TextureTarget, Velocity,
+    AnimationData, AnimationTimer, EntityLayer, FacingDirection, GameConfig, GameState, Package,
+    PlayAreaAligment, Player, PlayerIndex, RenderLayers, SimpleCollisionEvent, TextureTarget,
 };
 
 #[derive(Component, PartialEq, Eq)]
@@ -114,6 +114,7 @@ pub fn spawn_conveyor(
     let idle_timer = Timer::from_seconds(3., TimerMode::Once);
     commands
         .spawn((
+            RigidBody::Fixed,
             SpriteSheetBundle {
                 sprite: Sprite {
                     custom_size: Some(Vec2::new(
@@ -144,9 +145,10 @@ pub fn spawn_conveyor(
                 idle_timer: idle_timer,
                 package_count: 0,
             },
-            Collider {
-                size: Vec2::new(game_config.conveyor_config.size.x, conveyor_belt_length),
-            },
+            Collider::cuboid(
+                game_config.conveyor_config.size.x / 2.,
+                conveyor_belt_length / 2.,
+            ),
             RenderLayers::Single(EntityLayer::Furniture),
             animation_indices,
             AnimationTimer(Timer::from_seconds(
@@ -219,26 +221,24 @@ pub fn check_for_delivered_packages(
 
 pub fn collect_packages_on_outgoing_conveyors(
     mut commands: Commands,
-    mut collision_events: EventReader<CollisionEvent>,
+    mut collision_events: EventReader<SimpleCollisionEvent>,
     mut package_query: Query<
-        (Entity, &mut Transform, &mut Velocity, Option<&Parent>),
+        (Entity, &mut Transform, Option<&Parent>),
         (With<Package>, Without<Player>),
     >,
     mut conveyor_query: Query<(Entity, &mut Conveyor)>,
     game_config: Res<GameConfig>,
 ) {
     for event in collision_events.read() {
-        if let Some((package_entity, mut package_transform, mut package_velocity, package_parent)) =
-            package_query
-                .iter_mut()
-                .find(|(p, _, _, _)| p == &event.entity_a || p == &event.entity_b)
+        if let Some((package_entity, mut package_transform, package_parent)) = package_query
+            .iter_mut()
+            .find(|(p, _, _)| p == &event.entity_a || p == &event.entity_b)
         {
             if let Some((conveyor_entity, mut conveyor_info)) = conveyor_query
                 .iter_mut()
                 .find(|(c, _)| c == &event.entity_a || c == &event.entity_b)
             {
                 if package_parent.is_none() {
-                    package_velocity.0 = Vec2::ZERO;
                     package_transform.translation = calculate_attach_point_on_conveyor(
                         &conveyor_info,
                         Vec2::ZERO,

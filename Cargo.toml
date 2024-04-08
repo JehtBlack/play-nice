@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = { version = "1.0.81", features = ["backtrace"] }
 bevy = { version = "0.13.1", features = ["dynamic_linking", "serialize"] }
+bevy_rapier2d = "0.25.0"
 clap = { version = "4.5.4", features = ["derive", "cargo", "env"] }
 dotenv = { version = "0.15.0", features = ["clap"] }
 enum-map = { version = "2.7.3", features = ["serde"] }

@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use bevy::{
     prelude::*,
     render::camera::ScalingMode,
@@ -7,8 +5,9 @@ use bevy::{
     text::{JustifyText, Text2dBounds},
     window::WindowResolution,
 };
-
+use bevy_rapier2d::prelude::*;
 use enum_map::enum_map;
+use std::path::PathBuf;
 
 mod collision;
 mod configuration;
@@ -60,6 +59,11 @@ fn main() -> anyhow::Result<()> {
             }),
         )
         .add_plugins(SpriteLayerPlugin::<RenderLayers>::default())
+        .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(1.))
+        .add_plugins(RapierDebugRenderPlugin {
+            mode: DebugRenderMode::all(),
+            ..default()
+        })
         .insert_resource(config.app)
         .insert_resource(config.game)
         .insert_resource(rng)
@@ -138,7 +142,7 @@ fn main() -> anyhow::Result<()> {
                 },
             },
         })
-        .add_event::<CollisionEvent>()
+        .add_event::<SimpleCollisionEvent>()
         .add_systems(
             Startup,
             (setup_camera, setup_world, setup_supervisor, setup_players),
@@ -151,11 +155,9 @@ fn main() -> anyhow::Result<()> {
                 spawn_package_wave,
                 move_player,
                 update_conveyors,
-                update_velocities,
                 player_charge_throw,
                 throw_package,
                 check_for_collisions,
-                pickup_package,
                 collect_packages_on_outgoing_conveyors,
                 check_for_delivered_packages,
                 update_supervisor,
@@ -164,6 +166,7 @@ fn main() -> anyhow::Result<()> {
             )
                 .chain(),
         )
+        .add_systems(PostUpdate, pickup_package)
         .add_systems(
             Update,
             (
@@ -215,6 +218,23 @@ fn setup_players(
         &game_config,
     );
 
+    for i in 0..5 {
+        spawn_package(
+            &mut commands,
+            &asset_server,
+            &game_config,
+            Vec3::new(
+                -(app_config.base_resolution.x as f32 / 2.)
+                    + game_config.conveyor_config.size.x
+                    + (game_config.player_config.size / 2.)
+                    + 100.
+                    + game_config.package_config.size * 1.5 * i as f32,
+                0.,
+                0.,
+            ),
+        );
+    }
+
     spawn_player(
         &mut commands,
         &asset_server,
@@ -238,7 +258,9 @@ fn setup_world(
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
     game_config: Res<GameConfig>,
     app_config: Res<AppConfig>,
+    mut rapier_config: ResMut<RapierConfiguration>,
 ) {
+    rapier_config.gravity = Vec2::ZERO;
     let conveyor_walkway_size = Vec2::new(
         game_config.conveyor_config.size.x * 2.,
         game_config.supervisor_config.office_sprite_size.y as f32,
@@ -311,9 +333,12 @@ fn setup_world(
     );
 
     commands.spawn((
-        Transform::from_translation(conveyor_walkway_pos.extend(0.)),
-        Collider {
-            size: conveyor_walkway_size,
+        RigidBody::KinematicPositionBased,
+        Sensor,
+        Collider::cuboid(conveyor_walkway_size.x / 2., conveyor_walkway_size.y / 2.),
+        TransformBundle {
+            local: Transform::from_translation(conveyor_walkway_pos.extend(0.)),
+            ..default()
         },
         RenderLayers::Single(EntityLayer::Debugging),
     ));
@@ -499,70 +524,96 @@ fn spawn_walls(
     fn make_wall(
         pos: Vec2,
         size: Vec2,
-        anchor: Anchor,
-    ) -> (SpriteBundle, Collider, WallTag, RenderLayers) {
+        angle_in_radians: f32,
+    ) -> (RigidBody, TransformBundle, Collider, WallTag) {
         (
-            SpriteBundle {
-                sprite: Sprite {
-                    anchor: anchor,
-                    ..default()
-                },
-                transform: Transform::from_translation(pos.extend(0.)),
+            RigidBody::Fixed,
+            TransformBundle {
+                local: Transform::from_translation(pos.extend(0.))
+                    .with_rotation(Quat::from_rotation_z(angle_in_radians)),
                 ..default()
             },
-            Collider { size: size },
+            Collider::cuboid(size.x / 2., size.y / 2.),
             WallTag,
-            RenderLayers::Single(EntityLayer::HeldObject),
         )
     }
 
+    let wall_width = 10.;
+    let wall_half_width = wall_width / 2.;
+    // right wall
     commands.spawn(make_wall(
         Vec2::new(app_config.base_resolution.x as f32 / 2., 0.),
-        Vec2::new(10., app_config.base_resolution.y as f32),
-        Anchor::CenterLeft,
+        Vec2::new(app_config.base_resolution.y as f32, wall_half_width),
+        f32::to_radians(90.),
     ));
+
+    // left wall
     commands.spawn(make_wall(
         Vec2::new(-(app_config.base_resolution.x as f32) / 2., 0.),
-        Vec2::new(10., app_config.base_resolution.y as f32),
-        Anchor::CenterRight,
+        Vec2::new(app_config.base_resolution.y as f32, wall_half_width),
+        f32::to_radians(90.),
     ));
+
+    let conveyor_width_adjusted = game_config.conveyor_config.size.x - wall_half_width;
+    // wall at incoming conveyor right -> top wall
     commands.spawn(make_wall(
         Vec2::new(
-            -game_config.conveyor_config.size.x + 10.,
+            conveyor_width_adjusted,
             (incoming_belt_length / 2.)
                 + (game_config.supervisor_config.office_sprite_size.y as f32 / 2.),
         ),
         Vec2::new(
-            10.,
             game_config.supervisor_config.office_sprite_size.y as f32,
+            wall_width,
         ),
-        Anchor::CenterLeft,
+        f32::to_radians(90.),
     ));
+
+    // wall at incoming conveyor left -> top wall
     commands.spawn(make_wall(
         Vec2::new(
-            game_config.conveyor_config.size.x - 10.,
+            -conveyor_width_adjusted,
             (incoming_belt_length / 2.)
                 + (game_config.supervisor_config.office_sprite_size.y as f32 / 2.),
         ),
         Vec2::new(
-            10.,
             game_config.supervisor_config.office_sprite_size.y as f32,
+            wall_width,
         ),
-        Anchor::CenterRight,
+        f32::to_radians(90.),
     ));
+
+    let top_wall_width = (app_config.base_resolution.x as f32 / 2.) - conveyor_width_adjusted;
+    let top_wall_half_width = top_wall_width / 2.;
+    // top wall right
     commands.spawn(make_wall(
         Vec2::new(
-            0.,
+            conveyor_width_adjusted + top_wall_half_width,
             (app_config.base_resolution.y as f32 / 2.)
-                - (game_config.supervisor_config.office_sprite_size.y as f32 / 2.),
+                - (game_config.supervisor_config.office_sprite_size.y as f32 / 2.)
+                + wall_half_width,
         ),
-        Vec2::new(app_config.base_resolution.x as f32, 10.),
-        Anchor::BottomCenter,
+        Vec2::new(top_wall_width, wall_width),
+        0.,
     ));
+
+    // top wall left
+    commands.spawn(make_wall(
+        Vec2::new(
+            -(conveyor_width_adjusted + top_wall_half_width),
+            (app_config.base_resolution.y as f32 / 2.)
+                - (game_config.supervisor_config.office_sprite_size.y as f32 / 2.)
+                + wall_half_width,
+        ),
+        Vec2::new(top_wall_width as f32, wall_width),
+        0.,
+    ));
+
+    // bottom wall
     commands.spawn(make_wall(
         Vec2::new(0., -(app_config.base_resolution.y as f32) / 2.),
-        Vec2::new(app_config.base_resolution.x as f32, 10.),
-        Anchor::TopCenter,
+        Vec2::new(app_config.base_resolution.x as f32, wall_width),
+        0.,
     ));
 }
 

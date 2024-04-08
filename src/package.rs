@@ -1,9 +1,9 @@
-use bevy::prelude::*;
-
 use crate::{
-    calculate_attach_point_on_conveyor, random::*, Collider, Conveyor, ConveyorLabelTag,
-    EntityLayer, GameConfig, GameState, RenderLayers, TextureTarget, Velocity,
+    calculate_attach_point_on_conveyor, random::*, Conveyor, ConveyorLabelTag, EntityLayer,
+    GameConfig, GameState, RenderLayers, TextureTarget,
 };
+use bevy::prelude::*;
+use bevy_rapier2d::prelude::*;
 
 #[derive(Component)]
 pub struct Package;
@@ -12,9 +12,14 @@ pub struct Package;
 pub struct PackageBundle {
     pub sprite_bundle: SpriteBundle,
     pub package: Package,
-    pub velocity: Velocity,
-    pub collider: Collider,
     pub render_layers: RenderLayers,
+}
+
+#[derive(Bundle)]
+pub struct PackagePhysicsBundle {
+    pub rigid_body: RigidBody,
+    pub collider: Collider,
+    pub locked_axes: LockedAxes,
 }
 
 impl Default for PackageBundle {
@@ -22,9 +27,17 @@ impl Default for PackageBundle {
         Self {
             sprite_bundle: SpriteBundle::default(),
             package: Package,
-            velocity: Velocity(Vec2::ZERO),
-            collider: Collider::default(),
             render_layers: RenderLayers::Multi(maplit::btreeset! {EntityLayer::Object}),
+        }
+    }
+}
+
+impl Default for PackagePhysicsBundle {
+    fn default() -> Self {
+        Self {
+            rigid_body: RigidBody::Dynamic,
+            collider: Collider::default(),
+            locked_axes: LockedAxes::ROTATION_LOCKED,
         }
     }
 }
@@ -37,30 +50,36 @@ pub fn spawn_package(
 ) {
     let texture_pack = game_config.get_texture_pack();
     let package_sprite = texture_pack.choose_texture_for(TextureTarget::Package, None);
-    commands.spawn(PackageBundle {
-        sprite_bundle: SpriteBundle {
-            sprite: Sprite {
-                custom_size: Some(Vec2::new(
-                    game_config.package_config.size,
-                    game_config.package_config.size,
-                )),
+    commands.spawn((
+        PackageBundle {
+            sprite_bundle: SpriteBundle {
+                sprite: Sprite {
+                    custom_size: Some(Vec2::new(
+                        game_config.package_config.size,
+                        game_config.package_config.size,
+                    )),
+                    ..default()
+                },
+                transform: Transform {
+                    translation: package_pos,
+                    ..default()
+                },
+                texture: asset_server
+                    .load(&format!("{}/{}", texture_pack.root, package_sprite.path)),
                 ..default()
             },
-            transform: Transform {
-                translation: package_pos,
-                ..default()
-            },
-            texture: asset_server.load(&format!("{}/{}", texture_pack.root, package_sprite.path)),
-            ..default()
+            package: Package,
+            render_layers: RenderLayers::Multi(maplit::btreeset! {EntityLayer::Object}),
         },
-        collider: Collider {
-            size: Vec2::new(
-                game_config.package_config.size,
-                game_config.package_config.size,
+        PackagePhysicsBundle {
+            rigid_body: RigidBody::Dynamic,
+            collider: Collider::cuboid(
+                game_config.package_config.size / 2.,
+                game_config.package_config.size / 2.,
             ),
+            locked_axes: LockedAxes::ROTATION_LOCKED,
         },
-        ..default()
-    });
+    ));
 }
 
 pub fn spawn_package_wave(
@@ -121,7 +140,8 @@ pub fn spawn_package_wave(
                         texture: asset_server.load(&package_sprite_path),
                         ..default()
                     },
-                    ..default()
+                    package: Package,
+                    render_layers: RenderLayers::Multi(maplit::btreeset! {EntityLayer::Object}),
                 });
             });
 
@@ -132,4 +152,27 @@ pub fn spawn_package_wave(
         conveyor_info.active_timer.reset();
         conveyor_info.active_timer.unpause();
     }
+}
+
+pub fn activate_package_physics(
+    commands: &mut Commands,
+    package_entity: Entity,
+    game_config: &Res<GameConfig>,
+) {
+    commands
+        .entity(package_entity)
+        .insert(PackagePhysicsBundle {
+            rigid_body: RigidBody::Dynamic,
+            collider: Collider::cuboid(
+                game_config.package_config.size / 2.,
+                game_config.package_config.size / 2.,
+            ),
+            locked_axes: LockedAxes::ROTATION_LOCKED,
+        });
+}
+
+pub fn deactivate_package_physics(commands: &mut Commands, package_entity: Entity) {
+    commands
+        .entity(package_entity)
+        .remove::<PackagePhysicsBundle>();
 }

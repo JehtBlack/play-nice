@@ -2,10 +2,14 @@ use bevy::{
     math::bounding::{Aabb2d, BoundingVolume, IntersectsVolume},
     prelude::*,
 };
+use bevy_rapier2d::{
+    pipeline::{CollisionEvent, ContactForceEvent},
+    plugin::RapierContext,
+};
 
-use crate::{Conveyor, GameConfig, Package};
+use crate::{Conveyor, Package};
 
-pub enum Collision {
+pub enum SimpleCollision {
     Left,
     Right,
     Top,
@@ -14,13 +18,13 @@ pub enum Collision {
 }
 
 #[derive(Default, Component)]
-pub struct Collider {
+pub struct SimpleCollider {
     pub size: Vec2,
 }
 
 #[derive(Event)]
-pub struct CollisionEvent {
-    pub collision: Collision,
+pub struct SimpleCollisionEvent {
+    pub collision: SimpleCollision,
     pub entity_a: Entity,
     pub entity_b: Entity,
 }
@@ -28,12 +32,9 @@ pub struct CollisionEvent {
 #[derive(Component)]
 pub struct WallTag;
 
-#[derive(Component)]
-pub struct Velocity(pub Vec2);
-
 pub fn check_for_collisions(
-    collider_query: Query<(Entity, &Collider, &GlobalTransform, Option<&Parent>)>,
-    mut collision_events: EventWriter<CollisionEvent>,
+    collider_query: Query<(Entity, &SimpleCollider, &GlobalTransform, Option<&Parent>)>,
+    mut collision_events: EventWriter<SimpleCollisionEvent>,
 ) {
     for (entity_a, collider_a, transform_a, _parent_a) in collider_query.iter() {
         for (entity_b, collider_b, transform_b, _parent_b) in collider_query.iter() {
@@ -49,20 +50,20 @@ pub fn check_for_collisions(
                 let offset = aabb_a.center() - closest;
                 let side = if offset.x.abs() > offset.y.abs() {
                     if offset.x > 0. {
-                        Collision::Right
+                        SimpleCollision::Right
                     } else {
-                        Collision::Left
+                        SimpleCollision::Left
                     }
                 } else if offset.y.abs() > offset.x.abs() {
                     if offset.y > 0. {
-                        Collision::Top
+                        SimpleCollision::Top
                     } else {
-                        Collision::Bottom
+                        SimpleCollision::Bottom
                     }
                 } else {
-                    Collision::Inside
+                    SimpleCollision::Inside
                 };
-                collision_events.send(CollisionEvent {
+                collision_events.send(SimpleCollisionEvent {
                     collision: side,
                     entity_a: entity_a,
                     entity_b: entity_b,
@@ -73,8 +74,8 @@ pub fn check_for_collisions(
 }
 
 pub fn react_to_basic_collisions(
-    mut collision_events: EventReader<CollisionEvent>,
-    mut query: Query<(Entity, &mut Transform, &Collider, Option<&Parent>)>,
+    mut collision_events: EventReader<SimpleCollisionEvent>,
+    mut query: Query<(Entity, &mut Transform, &SimpleCollider, Option<&Parent>)>,
     package_query: Query<
         (Entity, Option<&Parent>),
         (With<Package>, Without<Conveyor>, Without<WallTag>),
@@ -114,47 +115,55 @@ pub fn react_to_basic_collisions(
             }
 
             match event.collision {
-                Collision::Left => {
+                SimpleCollision::Left => {
                     transform_a.translation.x = transform_b.translation.x
                         - (collider_b.size.x / 2.)
                         - (collider_a.size.x / 2.);
                 }
-                Collision::Right => {
+                SimpleCollision::Right => {
                     transform_a.translation.x = transform_b.translation.x
                         + (collider_b.size.x / 2.)
                         + (collider_a.size.x / 2.);
                 }
-                Collision::Top => {
+                SimpleCollision::Top => {
                     transform_a.translation.y = transform_b.translation.y
                         + (collider_b.size.y / 2.)
                         + (collider_a.size.y / 2.);
                 }
-                Collision::Bottom => {
+                SimpleCollision::Bottom => {
                     transform_a.translation.y = transform_b.translation.y
                         - (collider_b.size.y / 2.)
                         - (collider_a.size.y / 2.);
                 }
-                Collision::Inside => {}
+                SimpleCollision::Inside => {}
             }
         }
     }
 }
 
-pub fn update_velocities(
-    mut velocity_query: Query<(&mut Transform, &mut Velocity)>,
-    time: Res<Time>,
-    game_config: Res<GameConfig>,
-) {
-    for (mut transform, mut velocity) in &mut velocity_query {
-        transform.translation += velocity.0.extend(0.) * time.delta_seconds();
+pub fn clear_frame_collisions(mut collision_events: EventReader<SimpleCollisionEvent>) {
+    collision_events.clear();
+}
 
-        let norm = velocity.0.normalize_or_zero();
-        let deceleration_due_to_friction = norm.abs() * game_config.friction * time.delta_seconds();
-        velocity.0 = velocity.0.signum()
-            * (velocity.0.abs() - deceleration_due_to_friction).clamp(Vec2::ZERO, Vec2::INFINITY);
+pub fn display_physics_events(
+    mut collision_events: EventReader<CollisionEvent>,
+    mut contact_force_events: EventReader<ContactForceEvent>,
+) {
+    for collision_event in collision_events.read() {
+        println!("Received collision event: {:?}", collision_event);
+    }
+
+    for contact_force_event in contact_force_events.read() {
+        println!("Received contact force event: {:?}", contact_force_event);
     }
 }
 
-pub fn clear_frame_collisions(mut collision_events: EventReader<CollisionEvent>) {
-    collision_events.clear();
+pub fn display_physics_contacts(rapier_context: Res<RapierContext>) {
+    for contact in rapier_context.contact_pairs() {
+        println!(
+            "Contact between {:?} and {:?}",
+            contact.collider1(),
+            contact.collider2()
+        );
+    }
 }

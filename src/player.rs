@@ -1,11 +1,16 @@
-use std::collections::HashSet;
-
 use bevy::prelude::*;
+use bevy_rapier2d::{
+    control::{KinematicCharacterController, KinematicCharacterControllerOutput},
+    dynamics::RigidBody,
+    geometry::{Collider, Sensor},
+    pipeline::QueryFilter,
+    plugin::RapierContext,
+};
 
 use crate::{
-    random::*, AnimationData, Collider, CollisionEvent, Conveyor, ConveyorLabelTag, EntityLayer,
-    FacingDirection, GameConfig, GameState, KeyAction, Package, PlayerIndex, RenderLayers,
-    TextureTarget, Velocity,
+    activate_package_physics, deactivate_package_physics, package, random::*, AnimationData,
+    Conveyor, ConveyorLabelTag, EntityLayer, FacingDirection, GameConfig, GameState, KeyAction,
+    Package, PlayerIndex, RenderLayers, TextureTarget,
 };
 
 pub enum PlayAreaAligment {
@@ -79,6 +84,7 @@ pub fn spawn_player(
     };
     commands
         .spawn((
+            RigidBody::KinematicPositionBased,
             SpriteSheetBundle {
                 sprite: Sprite {
                     custom_size: Some(Vec2::new(
@@ -103,12 +109,11 @@ pub fn spawn_player(
                 throw_timer: Timer::from_seconds(1., TimerMode::Once),
                 player_index: player_index,
             },
-            Collider {
-                size: Vec2::new(
-                    game_config.player_config.size,
-                    game_config.player_config.size,
-                ),
-            },
+            Collider::cuboid(
+                game_config.player_config.size / 2.,
+                game_config.player_config.size / 2.,
+            ),
+            KinematicCharacterController::default(),
             RenderLayers::Single(EntityLayer::Player),
             animation_indices,
         ))
@@ -137,10 +142,17 @@ pub fn spawn_player(
 pub fn move_player(
     game_state: Res<GameState>,
     game_config: Res<GameConfig>,
-    mut query: Query<(&mut Transform, &mut AnimationData, &Player), With<Player>>,
+    mut query: Query<
+        (
+            &mut KinematicCharacterController,
+            &mut AnimationData,
+            &Player,
+        ),
+        With<Player>,
+    >,
     time: Res<Time>,
 ) {
-    for (mut player_transform, mut player_anim_data, player_data) in &mut query {
+    for (mut character_controller, mut player_anim_data, player_data) in &mut query {
         let player_control_state = &game_state.player_controls[player_data.player_index].state;
         let sprinting = player_control_state[KeyAction::Sprint].pressed();
         // bias to facing horizontally TODO: remove this bias
@@ -164,28 +176,39 @@ pub fn move_player(
         }
 
         new_facing_direction.map(|f| player_anim_data.facing_direction = f);
-        player_transform.translation += direction.normalize_or_zero().extend(0.)
-            * game_config.player_config.move_speed
-            * if sprinting {
-                game_config.player_config.sprint_move_modifier
-            } else {
-                1.
-            }
-            * time.delta_seconds();
+        character_controller.translation = Some(
+            direction.normalize_or_zero()
+                * game_config.player_config.move_speed
+                * if sprinting {
+                    game_config.player_config.sprint_move_modifier
+                } else {
+                    1.
+                }
+                * time.delta_seconds(),
+        );
     }
 }
 
 pub fn pickup_package(
     mut commands: Commands,
-    mut collision_events: EventReader<CollisionEvent>,
-    mut player_query: Query<(Entity, &mut Player, Option<&Children>), With<Player>>,
+    rapier_context: Res<RapierContext>,
+    mut player_query: Query<
+        (
+            Entity,
+            &mut Player,
+            &Transform,
+            &KinematicCharacterControllerOutput,
+            Option<&Children>,
+        ),
+        With<Player>,
+    >,
     mut package_query: Query<
         (
             Entity,
             &mut Transform,
-            &mut Velocity,
             &mut RenderLayers,
             Option<&Parent>,
+            Has<RigidBody>,
         ),
         (With<Package>, Without<Player>),
     >,
@@ -193,93 +216,229 @@ pub fn pickup_package(
     game_state: Res<GameState>,
     game_config: Res<GameConfig>,
 ) {
-    let mut players_that_have_picked_up_a_package_this_frame = HashSet::<Entity>::new();
-    for event in collision_events.read() {
-        if let Some((player_entity, mut player_info, player_children)) = player_query
-            .iter_mut()
-            .find(|(p, _, _)| p == &event.entity_a || p == &event.entity_b)
-        {
-            let player_wants_to_pickup = game_state.player_controls[player_info.player_index].state
-                [KeyAction::PickupOrThrow]
-                .just_pressed();
-            if !player_wants_to_pickup {
-                continue;
-            }
+    for (player_entity, mut player_info, player_transform, player_output, player_children) in
+        player_query.iter_mut()
+    {
+        let player_wants_to_pickup = game_state.player_controls[player_info.player_index].state
+            [KeyAction::PickupOrThrow]
+            .just_pressed();
+        if !player_wants_to_pickup {
+            continue;
+        }
 
-            if player_children.map_or(false, |children| {
-                children
-                    .iter()
-                    .find(|child| package_query.get(**child).is_ok())
-                    .is_some()
-            }) || players_that_have_picked_up_a_package_this_frame
-                .get(&player_entity)
+        if player_children.map_or(false, |children| {
+            children
+                .iter()
+                .find(|child| package_query.get(**child).is_ok())
                 .is_some()
-            {
-                // player is already holding a package, don't pick up another
-                continue;
-            }
+        }) {
+            // player is already holding a package, don't pick up another
+            continue;
+        }
 
-            // packages can either be picked up from the conveyor or from the floor
-            let package_collision = package_query
-                .iter_mut()
-                .find(|(p, _, _, _, _)| p == &event.entity_a || p == &event.entity_b);
-            let conveyor_collision = conveyor_query.iter_mut().find(|(c, _, label)| {
-                (c == &event.entity_a || c == &event.entity_b)
-                    && label == &&ConveyorLabelTag::Incoming
-            });
-
-            if package_collision.is_some() || conveyor_collision.is_some() {
-                // rebind package_collision to the first package child of the conveyor if touching a conveyor
-                let package_collision = if conveyor_collision.is_some() {
-                    let (conveyor_entity, _, _) = conveyor_collision.unwrap();
-                    package_query.iter_mut().find(|(_, _, _, _, parent)| {
-                        parent.map_or(false, |parent| parent.get() == conveyor_entity)
-                    })
-                } else {
-                    package_collision
-                };
-
-                let (
-                    package_entity,
-                    mut package_transform,
-                    mut package_velocity,
-                    mut package_layers,
-                    package_parent,
-                ) = package_collision.unwrap();
-
-                let currently_held = package_parent.map_or(false, |_p| true);
-                let conveyor_holding_package = package_parent.map_or(None, |p| {
-                    conveyor_query
-                        .iter_mut()
-                        .find(|(c, _, _)| c == &p.get())
-                        .map_or(None, |(_, c, t)| Some((c, t)))
-                });
-                if !currently_held
-                    || conveyor_holding_package.map_or(false, |(mut c, t)| {
-                        if t == &ConveyorLabelTag::Incoming {
-                            c.package_count -= 1;
-                            true
-                        } else {
-                            false
-                        }
-                    })
-                {
-                    // pick up the package
-                    package_velocity.0 = Vec2::ZERO;
-                    package_transform.translation =
-                        Vec3::new(0., game_config.player_config.size / 2., 0.);
-                    match package_layers.as_mut() {
-                        RenderLayers::Multi(layers) => {
-                            layers.insert(EntityLayer::HeldObject);
-                            ()
-                        }
-                        _ => {}
-                    }
-                    commands.entity(player_entity).add_child(package_entity);
-                    players_that_have_picked_up_a_package_this_frame.insert(player_entity);
-                    player_info.throw_timer.reset();
-                    player_info.pickup_cooldown_timer.reset();
+        let colliding_conveyors = conveyor_query.iter_mut().filter_map(
+            |(conveyor_entity, conveyor_info, conveyor_label)| {
+                if conveyor_label != &ConveyorLabelTag::Incoming {
+                    return None;
                 }
+
+                if let Some(collision) = player_output.collisions.iter().find_map(|collision| {
+                    if collision.entity == conveyor_entity {
+                        Some(collision)
+                    } else {
+                        None
+                    }
+                }) {
+                    Some((
+                        conveyor_entity,
+                        conveyor_info,
+                        conveyor_label,
+                        collision.toi,
+                    ))
+                } else {
+                    None
+                }
+            },
+        );
+
+        let most_recent_conveyor_collision = colliding_conveyors.max_by(|a, b| {
+            a.3.toi
+                .partial_cmp(&b.3.toi)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        let package = if let Some((conveyor_entity, conveyor_info, conveyor_label, _)) =
+            most_recent_conveyor_collision
+        {
+            if let Some((
+                package_entity,
+                package_transform,
+                package_layers,
+                package_parent,
+                package_rigid_body,
+            )) = package_query.iter_mut().find(|(_, _, _, parent, _)| {
+                parent.map_or(false, |parent| parent.get() == conveyor_entity)
+            }) {
+                Some((
+                    package_entity,
+                    package_transform,
+                    package_layers,
+                    package_parent,
+                    package_rigid_body,
+                    Some((conveyor_entity, conveyor_info, conveyor_label)),
+                ))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        let package = if let Some(package) = package {
+            Some(package)
+        } else {
+            let sensor_area = Collider::ball(game_config.player_config.size * 2.5);
+            let filter = QueryFilter {
+                exclude_collider: Some(player_entity),
+                ..default()
+            };
+            let mut nearby_packages = Vec::new();
+            let mut nearby_conveyors = Vec::new();
+            rapier_context.intersections_with_shape(
+                player_transform.translation.truncate(),
+                0.,
+                &sensor_area,
+                filter,
+                |colliding_entity| {
+                    if package_query.get(colliding_entity).is_ok() {
+                        nearby_packages.push(colliding_entity);
+                        println!("Package nearby that we could pick up");
+                    } else if conveyor_query.get(colliding_entity).is_ok() {
+                        nearby_conveyors.push(colliding_entity);
+                        println!("Conveyor nearby that we could pick up from");
+                    }
+                    true
+                },
+            );
+
+            if !nearby_packages.is_empty() {
+                // find nearest pacakge
+                let candidate = package_query
+                    .iter_mut()
+                    .filter(|(package_entity, _, _, _, _)| nearby_packages.contains(package_entity))
+                    .min_by(|a, b| {
+                        let sq_dist_a =
+                            a.1.translation
+                                .truncate()
+                                .distance_squared(player_transform.translation.truncate());
+                        let sq_dist_b =
+                            b.1.translation
+                                .truncate()
+                                .distance_squared(player_transform.translation.truncate());
+                        sq_dist_a
+                            .partial_cmp(&sq_dist_b)
+                            .unwrap_or(std::cmp::Ordering::Equal)
+                    });
+                if let Some((
+                    package_entity,
+                    package_transform,
+                    package_layers,
+                    package_parent,
+                    package_rigid_body,
+                )) = candidate
+                {
+                    Some((
+                        package_entity,
+                        package_transform,
+                        package_layers,
+                        package_parent,
+                        package_rigid_body,
+                        None,
+                    ))
+                } else {
+                    None
+                }
+            } else {
+                // get first incoming conveyor
+                let candidate = conveyor_query
+                    .iter_mut()
+                    .filter(|(conveyor_entity, _, conveyor_label)| {
+                        nearby_conveyors.contains(conveyor_entity)
+                            && **conveyor_label == ConveyorLabelTag::Incoming
+                    })
+                    .next();
+                if let Some((conveyor_entity, conveyor_info, conveyor_label)) = candidate {
+                    if let Some((
+                        package_entity,
+                        package_transform,
+                        package_layers,
+                        package_parent,
+                        package_rigid_body,
+                    )) = package_query.iter_mut().find(|(_, _, _, parent, _)| {
+                        parent.map_or(false, |parent| parent.get() == conveyor_entity)
+                    }) {
+                        Some((
+                            package_entity,
+                            package_transform,
+                            package_layers,
+                            package_parent,
+                            package_rigid_body,
+                            Some((conveyor_entity, conveyor_info, conveyor_label)),
+                        ))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            }
+        };
+
+        let (
+            package_entity,
+            mut package_transform,
+            mut package_layers,
+            package_parent,
+            package_rigid_body,
+            conveyor_holding_package,
+        ) = if let Some(package) = package {
+            package
+        } else {
+            continue;
+        };
+
+        let currently_held = package_parent.map_or(false, |_p| true);
+        let package_on_conveyor = conveyor_holding_package.is_some();
+
+        if !currently_held
+            || conveyor_holding_package.map_or(false, |(_, mut conveyor_info, conveyor_label)| {
+                if conveyor_label == &ConveyorLabelTag::Incoming {
+                    conveyor_info.package_count -= 1;
+                    true
+                } else {
+                    false
+                }
+            })
+        {
+            if package_on_conveyor {
+                println!("picking up package from conveyor");
+            } else {
+                println!("picking up package from ground");
+            }
+            // pick up the package
+            package_transform.translation = Vec3::new(0., game_config.player_config.size / 2., 0.);
+            match package_layers.as_mut() {
+                RenderLayers::Multi(layers) => {
+                    layers.insert(EntityLayer::HeldObject);
+                    ()
+                }
+                _ => {}
+            }
+            commands.entity(player_entity).add_child(package_entity);
+            player_info.throw_timer.reset();
+            player_info.pickup_cooldown_timer.reset();
+            if package_rigid_body {
+                deactivate_package_physics(&mut commands, package_entity);
             }
         }
     }
@@ -289,25 +448,14 @@ pub fn throw_package(
     mut commands: Commands,
     player_query: Query<(Entity, &mut Player, &AnimationData, &Transform), With<Player>>,
     mut package_query: Query<
-        (
-            Entity,
-            &mut Transform,
-            &mut Velocity,
-            &mut RenderLayers,
-            Option<&Parent>,
-        ),
+        (Entity, &mut Transform, &mut RenderLayers, Option<&Parent>),
         (With<Package>, Without<Player>),
     >,
     game_state: Res<GameState>,
     game_config: Res<GameConfig>,
 ) {
-    for (
-        package_entity,
-        mut package_transform,
-        mut package_velocity,
-        mut package_layers,
-        package_parent,
-    ) in &mut package_query
+    for (package_entity, mut package_transform, mut package_layers, package_parent) in
+        &mut package_query
     {
         let package_parent = if package_parent.is_none() {
             continue;
@@ -361,7 +509,7 @@ pub fn throw_package(
                 direction.x = 1.;
             }
 
-            package_velocity.0 = direction.normalize_or_zero() * (throw_distance / 0.5);
+            activate_package_physics(&mut commands, package_entity, &game_config);
         }
     }
 }
