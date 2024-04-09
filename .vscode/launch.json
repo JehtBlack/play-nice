@@ -24,6 +24,7 @@
                 "env": {
                     "BEVY_ASSET_ROOT": "${workspaceFolder}/",
                     "RUST_LOG": "info,play_nice=trace",
+                    "PATH": "${env:USERPROFILE}/.rustup/toolchains/stable-x86_64-pc-windows-msvc/bin;${workspaceFolder}/target/debug/deps;${env:PATH}",
                 },
             },
             "linux": {
